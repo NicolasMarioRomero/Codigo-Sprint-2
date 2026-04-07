@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# JMeter resultados
+resultados_*.csv
+
+# Docker
+*.log
