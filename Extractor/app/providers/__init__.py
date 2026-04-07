@@ -1,11 +1,11 @@
 from .aws_provider import AWSProvider
-from .azure_provider import AzureProvider
+from .gcp_provider import GCPProvider
 from .base_provider import CloudProvider
 
 # Registro de proveedores disponibles — agnóstico al proveedor
 PROVIDER_REGISTRY: dict[str, CloudProvider] = {
     "aws": AWSProvider(),
-    "azure": AzureProvider(),
+    "gcp": GCPProvider(),
 }
 
 
