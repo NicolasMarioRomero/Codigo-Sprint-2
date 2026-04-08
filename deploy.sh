@@ -67,8 +67,8 @@ log "Instancia EC2 creada: $PUBLIC_IP"
 cd ..
 
 # ── 3. Esperar a que la instancia esté lista ───────────────
-info "Esperando que la instancia arranque (~90 segundos para bootstrap)..."
-sleep 60
+info "Esperando que la instancia arranque (~30 segundos para bootstrap mínimo)..."
+sleep 30
 
 SSH_OPTS="-i $KEY_PATH -o StrictHostKeyChecking=no -o ConnectTimeout=10"
 RETRIES=20
@@ -82,18 +82,33 @@ for i in $(seq 1 $RETRIES); do
     [ $i -eq $RETRIES ] && err "La instancia no respondió a tiempo"
 done
 
-# Esperar a que el bootstrap (user_data.sh) termine de instalar PostgreSQL y Redis
-info "Esperando que PostgreSQL y Redis estén listos..."
-for i in $(seq 1 50); do
-    PG_OK=$(ssh $SSH_OPTS ubuntu@$PUBLIC_IP "pg_isready -h localhost -U postgres" 2>/dev/null && echo "ok" || echo "no")
-    if [ "$PG_OK" = "ok" ]; then
-        log "PostgreSQL listo"
-        break
-    fi
-    warn "Intento $i/30 — PostgreSQL no disponible aún..."
-    sleep 10
-    [ $i -eq 30 ] && err "PostgreSQL no arrancó a tiempo. Revisa /var/log/user_data.log en EC2."
-done
+# ── 3b. Instalar PostgreSQL y Redis directamente vía SSH ───
+info "Instalando PostgreSQL y Redis en EC2..."
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "sudo bash -s" << 'ENDSSH'
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get install -y postgresql postgresql-contrib redis-server
+
+    # ── Configurar PostgreSQL ──────────────────────────────
+    systemctl start postgresql
+    systemctl enable postgresql
+
+    sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'password';"
+    sudo -u postgres psql -c "CREATE DATABASE cloudcosts;" 2>/dev/null || true
+
+    PG_HBA=$(sudo -u postgres psql -t -c "SHOW hba_file;" | tr -d ' ')
+    sed -i "s|scram-sha-256|md5|g" "$PG_HBA"
+    systemctl restart postgresql
+
+    # ── Configurar Redis ───────────────────────────────────
+    sed -i 's/^bind .*/bind 127.0.0.1/' /etc/redis/redis.conf
+    systemctl start redis-server
+    systemctl enable redis-server
+
+    echo "=== PostgreSQL y Redis listos ==="
+ENDSSH
+log "PostgreSQL y Redis instalados y configurados"
 
 # ── 4. Copiar código al servidor ───────────────────────────
 info "Copiando código al servidor (tar + ssh)..."
