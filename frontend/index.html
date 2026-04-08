@@ -4,431 +4,317 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BITE FinOps — Cloud Cost Dashboard</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f1117;
-      color: #e2e8f0;
-      min-height: 100vh;
-    }
-
-    header {
-      background: #1a1d2e;
-      border-bottom: 1px solid #2d3148;
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
-    header .logo {
-      font-size: 22px;
-      font-weight: 700;
-      color: #7c6af7;
-      letter-spacing: -0.5px;
-    }
-
-    header .logo span { color: #a78bfa; }
-
-    header .subtitle {
-      font-size: 13px;
-      color: #64748b;
-      margin-left: auto;
-    }
-
-    .container {
-      max-width: 1100px;
-      margin: 32px auto;
-      padding: 0 24px;
-    }
-
-    .controls {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 28px;
-      flex-wrap: wrap;
-    }
-
-    label { font-size: 14px; color: #94a3b8; }
-
-    select, button {
-      background: #1e2235;
-      border: 1px solid #2d3148;
-      border-radius: 8px;
-      color: #e2e8f0;
-      padding: 8px 14px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-
-    select:hover, select:focus { border-color: #7c6af7; outline: none; }
-
-    .btn-primary {
-      background: #7c6af7;
-      border-color: #7c6af7;
-      font-weight: 600;
-      padding: 8px 20px;
-    }
-    .btn-primary:hover { background: #6d5ae6; border-color: #6d5ae6; }
-
-    .btn-secondary {
-      background: #1e2235;
-      border-color: #2d3148;
-    }
-    .btn-secondary:hover { border-color: #7c6af7; }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .card {
-      background: #1a1d2e;
-      border: 1px solid #2d3148;
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .card .label {
-      font-size: 12px;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 8px;
-    }
-
-    .card .value {
-      font-size: 28px;
-      font-weight: 700;
-      color: #a78bfa;
-    }
-
-    .card .sub {
-      font-size: 12px;
-      color: #475569;
-      margin-top: 4px;
-    }
-
-    .section-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: #94a3b8;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .badge {
-      font-size: 11px;
-      background: #2d3148;
-      border-radius: 4px;
-      padding: 2px 8px;
-      color: #7c6af7;
-    }
-
-    .breakdown-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .bar-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 10px;
-      font-size: 13px;
-    }
-
-    .bar-label { width: 130px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .bar-track {
-      flex: 1;
-      background: #2d3148;
-      border-radius: 4px;
-      height: 6px;
-      overflow: hidden;
-    }
-
-    .bar-fill {
-      height: 100%;
-      border-radius: 4px;
-      background: linear-gradient(90deg, #7c6af7, #a78bfa);
-      transition: width 0.6s ease;
-    }
-
-    .bar-amount { width: 80px; text-align: right; color: #e2e8f0; font-size: 12px; }
-
-    /* Extractor section */
-    .extractor-card {
-      background: #1a1d2e;
-      border: 1px solid #2d3148;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 28px;
-    }
-
-    .extractor-row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-    }
-
-    .result-box {
-      background: #0f1117;
-      border: 1px solid #2d3148;
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 13px;
-      font-family: monospace;
-      color: #7c6af7;
-      min-height: 44px;
-      word-break: break-all;
-    }
-
-    .result-box.error { color: #f87171; }
-    .result-box.success { color: #34d399; }
-
-    /* Status chip */
-    .source-chip {
-      display: inline-block;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 20px;
-      font-weight: 600;
-    }
-    .source-chip.cache { background: #1a3a2a; color: #34d399; }
-    .source-chip.db    { background: #1a2a3a; color: #60a5fa; }
-
-    .loading { color: #475569; font-style: italic; }
-
-    .empty { color: #475569; text-align: center; padding: 40px; }
-
-    @media (max-width: 600px) {
-      .breakdown-grid { grid-template-columns: 1fr; }
-      .controls { flex-direction: column; align-items: flex-start; }
-    }
-  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+<!-- ═══════════════ HEADER ═══════════════ -->
 <header>
   <div class="logo">BITE <span>FinOps</span></div>
-  <div class="subtitle">Cloud Cost Intelligence Platform</div>
+  <span class="header-tag">Cloud Intelligence</span>
+
+  <div class="header-right">
+    <div class="latency-badge" id="latencyBadge">
+      <span class="spinner" style="display:none" id="latencySpinner"></span>
+      <span id="latencyText"></span>
+    </div>
+    <span id="globalSourceChip"></span>
+    <div class="avatar">BF</div>
+  </div>
 </header>
 
-<div class="container">
+<!-- ═══════════════ LAYOUT ═══════════════ -->
+<div class="layout">
 
-  <!-- Controls -->
-  <div class="controls">
-    <label for="companySelect">Empresa</label>
-    <select id="companySelect">
-      <option value="">— seleccionar —</option>
-      <script>for(let i=1;i<=10;i++) document.write(`<option value="${i}">Company ${i}</option>`)</script>
-    </select>
-    <button class="btn-primary" onclick="loadDashboard()">Ver Dashboard</button>
-    <button class="btn-secondary" onclick="loadReport()">Ver Reporte Completo</button>
-    <span id="sourceChip"></span>
-  </div>
-
-  <!-- KPI Cards -->
-  <div class="grid" id="kpiGrid">
-    <div class="card"><div class="label">Total mensual</div><div class="value" id="kpiTotal">—</div><div class="sub">USD este periodo</div></div>
-    <div class="card"><div class="label">Servicios activos</div><div class="value" id="kpiServices">—</div><div class="sub">en uso</div></div>
-    <div class="card"><div class="label">Proveedores</div><div class="value" id="kpiProviders">—</div><div class="sub">conectados</div></div>
-    <div class="card"><div class="label">Mayor gasto</div><div class="value" id="kpiTop" style="font-size:18px">—</div><div class="sub" id="kpiTopCost"></div></div>
-  </div>
-
-  <!-- Breakdowns -->
-  <div class="breakdown-grid">
-    <div class="card">
-      <div class="section-title">Por Servicio <span class="badge" id="serviceCount"></span></div>
-      <div id="serviceBreakdown"><div class="empty">Carga una empresa para ver datos</div></div>
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navegación</div>
+      <div class="nav-item active" onclick="showPage('dashboard', this)">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('extractor', this)">
+        <span class="icon">⚡</span> Extractor
+      </div>
+      <div class="nav-item" onclick="showPage('reports', this)">
+        <span class="icon">📋</span> Reportes
+      </div>
+      <div class="nav-item" onclick="showPage('asr', this)">
+        <span class="icon">🔬</span> ASR / Métricas
+      </div>
     </div>
-    <div class="card">
-      <div class="section-title">Por Proveedor <span class="badge" id="providerCount"></span></div>
-      <div id="providerBreakdown"><div class="empty">Carga una empresa para ver datos</div></div>
-    </div>
-  </div>
 
-  <!-- Extractor -->
-  <div class="extractor-card">
-    <div class="section-title">Extractor de Métricas Cloud <span class="badge">Agente</span></div>
-    <div class="extractor-row">
-      <label>Proveedor</label>
-      <select id="providerSelect">
-        <option value="aws">AWS</option>
-        <option value="gcp">GCP</option>
+    <div class="company-picker">
+      <label>Empresa activa</label>
+      <select id="companySelect" onchange="onCompanyChange()">
+        <option value="">— seleccionar —</option>
       </select>
-      <label>Proyecto</label>
-      <select id="projectSelect">
-        <script>for(let i=1;i<=5;i++) document.write(`<option value="${i}">project-${i}</option>`)</script>
-      </select>
-      <button class="btn-primary" onclick="runExtractor()">Ejecutar Extracción</button>
     </div>
-    <div class="result-box" id="extractorResult">Listo para extraer métricas cloud.</div>
-  </div>
+  </nav>
 
-  <!-- Report section -->
-  <div id="reportSection" style="display:none">
-    <div class="card">
-      <div class="section-title">Reportes detallados <span class="badge" id="reportCount"></span></div>
-      <div id="reportList"></div>
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- ══════ PAGE: Dashboard ══════ -->
+    <div class="page active" id="page-dashboard">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard de Costos</div>
+          <div class="page-sub" id="dashSub">Selecciona una empresa para cargar datos</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="loadDashboard()" id="btnRefresh">
+            🔄 Actualizar
+          </button>
+          <button class="btn btn-primary" onclick="loadDashboard(true)">
+            Cargar Dashboard
+          </button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card skeleton skeleton-card"></div>
+        <div class="kpi-card skeleton skeleton-card"></div>
+        <div class="kpi-card skeleton skeleton-card"></div>
+        <div class="kpi-card skeleton skeleton-card"></div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-title">Distribución por Proveedor <span class="chip chip-blue">Pie</span></div>
+          <div class="chart-wrap">
+            <canvas id="providerChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Gasto por Servicio <span class="chip chip-purple">Top 8</span></div>
+          <div class="chart-wrap">
+            <canvas id="serviceChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bar breakdowns -->
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-title">Por Servicio <span class="chip chip-purple" id="svcCount"></span></div>
+          <div id="serviceBreakdown">
+            <div class="empty-state"><div class="icon">☁️</div><p>Carga una empresa para ver el desglose</p></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Por Proveedor <span class="chip chip-blue" id="provCount"></span></div>
+          <div id="providerBreakdown">
+            <div class="empty-state"><div class="icon">🌐</div><p>Carga una empresa para ver los proveedores</p></div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
 
+    <!-- ══════ PAGE: Extractor ══════ -->
+    <div class="page" id="page-extractor">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Extractor de Métricas Cloud</div>
+          <div class="page-sub">Agente agnóstico de proveedor · ASR Escalabilidad</div>
+        </div>
+        <span class="chip chip-green" style="font-size:12px;padding:4px 10px">
+          ✓ Reintentos automáticos · Backoff exponencial
+        </span>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title">Configuración de Extracción</div>
+        <div class="extractor-form">
+          <div class="form-group">
+            <label>Empresa</label>
+            <select id="extCompanySelect"></select>
+          </div>
+          <div class="form-group">
+            <label>Proveedor</label>
+            <select id="providerSelect">
+              <option value="aws">☁️ AWS</option>
+              <option value="gcp">🔵 GCP</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Proyecto</label>
+            <select id="projectSelect"></select>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="runExtractorSync()" id="btnExtSync">
+              ⚡ Extracción Síncrona
+            </button>
+            <button class="btn btn-secondary" onclick="runExtractorAsync()" id="btnExtAsync">
+              📬 Encolar (Async)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:10px">
+          Log de Ejecución
+          <span class="chip chip-purple" id="attemptsChip" style="display:none"></span>
+        </div>
+        <div class="task-timeline" id="taskTimeline">
+          <div class="log-line"><span class="log-ts">--:--:--</span><span class="log-info">Sistema listo. Configura y ejecuta una extracción.</span></div>
+        </div>
+      </div>
+
+      <!-- Metrics tiles -->
+      <div id="metricsSection" style="display:none">
+        <div class="card">
+          <div class="card-title">Métricas Extraídas <span class="chip chip-green" id="metricsCount"></span></div>
+          <div class="metrics-grid" id="metricsGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: Reports ══════ -->
+    <div class="page" id="page-reports">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">Reportes Detallados</div>
+          <div class="page-sub" id="reportSub">Selecciona una empresa y carga los reportes</div>
+        </div>
+        <button class="btn btn-primary" onclick="loadReports()">Cargar Reportes</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Proveedor</th>
+                <th>Servicio</th>
+                <th>Proyecto</th>
+                <th>Región</th>
+                <th>Costo</th>
+                <th>Uso</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody">
+              <tr><td colspan="8">
+                <div class="empty-state">
+                  <div class="icon">📋</div>
+                  <p>Selecciona una empresa y presiona "Cargar Reportes"</p>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="paginationBar" style="display:none">
+          <div class="info" id="paginationInfo"></div>
+          <div class="page-btns" id="paginationBtns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: ASR ══════ -->
+    <div class="page" id="page-asr">
+
+      <div class="page-header">
+        <div>
+          <div class="page-title">ASR — Métricas de Calidad</div>
+          <div class="page-sub">Monitoreo en tiempo real de los requisitos arquitectónicos significativos</div>
+        </div>
+      </div>
+
+      <!-- ASR Cards -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px" id="asrCards">
+        <!-- Latencia -->
+        <div class="card">
+          <span class="asr-badge asr-latency">⏱ ASR Latencia</span>
+          <div class="asr-title">Dashboard en &lt; 3 segundos</div>
+          <div class="asr-desc">Con ~5,000 usuarios concurrentes, el dashboard de reportes debe responder en máximo 3s mediante caché Redis y agregación SQL.</div>
+          <div class="asr-metric">
+            <div class="asr-meter">
+              <div class="asr-fill" id="latFill" style="width:0%;background:var(--green)"></div>
+            </div>
+            <div class="asr-val" id="latVal" style="color:var(--text-muted)">—</div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px" id="latStatus">Carga el dashboard para medir la latencia</div>
+
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+            <div class="card-title" style="margin-bottom:8px">Tácticas aplicadas</div>
+            <div style="font-size:12px;color:var(--text-soft);line-height:1.8">
+              ✦ <strong>Caché Redis</strong> — TTL 30s para dashboard, 60s para reportes<br>
+              ✦ <strong>Agregación SQL</strong> — GROUP BY en DB, sin Python-side loops<br>
+              ✦ <strong>Índices de DB</strong> — company_id, project_id indexados<br>
+              ✦ <strong>Pool de conexiones</strong> — SQLAlchemy connection pool
+            </div>
+          </div>
+        </div>
+
+        <!-- Escalabilidad -->
+        <div class="card">
+          <span class="asr-badge asr-scale">⚡ ASR Escalabilidad</span>
+          <div class="asr-title">100% de éxito en extracciones</div>
+          <div class="asr-desc">El extractor debe capturar métricas de forma agnóstica en ambientes sobrecargados, garantizando 100% de éxito mediante reintentos.</div>
+          <div class="asr-metric">
+            <div class="asr-meter">
+              <div class="asr-fill" id="scaleFill" style="width:0%;background:var(--green)"></div>
+            </div>
+            <div class="asr-val" id="scaleVal" style="color:var(--text-muted)">—</div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px" id="scaleStatus">Ejecuta una extracción para ver métricas</div>
+
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+            <div class="card-title" style="margin-bottom:8px">Tácticas aplicadas</div>
+            <div style="font-size:12px;color:var(--text-soft);line-height:1.8">
+              ✦ <strong>Reintentos (MAX 5)</strong> — Backoff exponencial 2^n segundos<br>
+              ✦ <strong>Jitter aleatorio</strong> — Evita thundering herd en reintentos<br>
+              ✦ <strong>Patrón Strategy</strong> — Provider agnóstico (AWS / GCP)<br>
+              ✦ <strong>Celery async</strong> — Cola de tareas para extracciones pesadas<br>
+              ✦ <strong>Validación</strong> — Solo métricas válidas pasan al resultado
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historial de mediciones -->
+      <div class="card">
+        <div class="card-title">Historial de Mediciones <span class="chip chip-purple" id="histCount">0</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>ASR</th>
+                <th>Empresa</th>
+                <th>Fuente</th>
+                <th>Resultado</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="asrHistory">
+              <tr><td colspan="6">
+                <div class="empty-state">
+                  <div class="icon">🔬</div>
+                  <p>Las mediciones aparecerán aquí al usar el dashboard y el extractor</p>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
-<script>
-const API_BASE = '/api/v1';
-const EXT_BASE = '/extractor/api/v1';
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
 
-function fmt(n) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
-}
-
-function renderBars(obj, container) {
-  if (!obj || !Object.keys(obj).length) {
-    container.innerHTML = '<div class="empty">Sin datos</div>';
-    return;
-  }
-  const max = Math.max(...Object.values(obj));
-  container.innerHTML = Object.entries(obj)
-    .sort((a, b) => b[1] - a[1])
-    .map(([k, v]) => `
-      <div class="bar-row">
-        <div class="bar-label" title="${k}">${k}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(v/max*100).toFixed(1)}%"></div></div>
-        <div class="bar-amount">${fmt(v)}</div>
-      </div>`).join('');
-}
-
-async function loadDashboard() {
-  const id = document.getElementById('companySelect').value;
-  if (!id) { alert('Selecciona una empresa primero.'); return; }
-
-  setKPIs('...', '...', '...', '—', '');
-  document.getElementById('serviceBreakdown').innerHTML = '<div class="loading">Cargando...</div>';
-  document.getElementById('providerBreakdown').innerHTML = '<div class="loading">Cargando...</div>';
-  document.getElementById('sourceChip').innerHTML = '';
-  document.getElementById('reportSection').style.display = 'none';
-
-  try {
-    const r = await fetch(`${API_BASE}/dashboard/${id}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    const s = data.summary;
-
-    const services  = s.service_breakdown  || {};
-    const providers = s.provider_breakdown || {};
-    const total     = s.total_cost ?? 0;
-
-    const topEntry = Object.entries(services).sort((a,b)=>b[1]-a[1])[0];
-
-    setKPIs(
-      fmt(total),
-      Object.keys(services).length,
-      Object.keys(providers).length,
-      topEntry ? topEntry[0] : '—',
-      topEntry ? fmt(topEntry[1]) : ''
-    );
-
-    document.getElementById('serviceCount').textContent  = Object.keys(services).length;
-    document.getElementById('providerCount').textContent = Object.keys(providers).length;
-
-    renderBars(services,  document.getElementById('serviceBreakdown'));
-    renderBars(providers, document.getElementById('providerBreakdown'));
-
-    const src = data.source || 'db';
-    document.getElementById('sourceChip').innerHTML =
-      `<span class="source-chip ${src}">${src === 'cache' ? '⚡ cache' : '🗄 base de datos'}</span>`;
-
-  } catch(e) {
-    document.getElementById('serviceBreakdown').innerHTML = `<div class="empty">Error: ${e.message}</div>`;
-    document.getElementById('providerBreakdown').innerHTML = '';
-  }
-}
-
-async function loadReport() {
-  const id = document.getElementById('companySelect').value;
-  if (!id) { alert('Selecciona una empresa primero.'); return; }
-
-  document.getElementById('reportSection').style.display = 'block';
-  document.getElementById('reportList').innerHTML = '<div class="loading">Cargando reporte...</div>';
-
-  try {
-    const r = await fetch(`${API_BASE}/report/${id}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    const items = Array.isArray(data) ? data : (data.reports || data.data || []);
-    document.getElementById('reportCount').textContent = items.length;
-
-    if (!items.length) {
-      document.getElementById('reportList').innerHTML = '<div class="empty">Sin reportes</div>';
-      return;
-    }
-
-    document.getElementById('reportList').innerHTML = items.slice(0, 20).map(rep => `
-      <div class="bar-row" style="border-bottom:1px solid #2d3148;padding-bottom:8px;margin-bottom:8px">
-        <div style="flex:1;font-size:13px;color:#94a3b8">${rep.provider || '—'} / ${rep.service || '—'}</div>
-        <div style="font-size:13px;color:#e2e8f0">${fmt(rep.cost ?? rep.amount ?? 0)}</div>
-        <div style="font-size:11px;color:#475569;width:80px;text-align:right">${rep.region || ''}</div>
-      </div>`).join('') + (items.length > 20 ? `<div class="sub" style="color:#475569;margin-top:8px">... y ${items.length-20} más</div>` : '');
-
-  } catch(e) {
-    document.getElementById('reportList').innerHTML = `<div class="empty">Error: ${e.message}</div>`;
-  }
-}
-
-async function runExtractor() {
-  const companyId = document.getElementById('companySelect').value || '1';
-  const provider  = document.getElementById('providerSelect').value;
-  const projectId = document.getElementById('projectSelect').value;
-  const box       = document.getElementById('extractorResult');
-
-  box.className = 'result-box';
-  box.textContent = `⏳ Ejecutando extracción ${provider.toUpperCase()} para Company ${companyId}...`;
-
-  try {
-    const r = await fetch(`${EXT_BASE}/extractor/extract/sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_id: parseInt(companyId), project_id: parseInt(projectId), provider })
-    });
-    const data = await r.json();
-    if (data.status === 'success' || r.ok) {
-      box.className = 'result-box success';
-      const metrics = data.metrics || data.data || {};
-      const count = typeof metrics === 'object' ? Object.keys(metrics).length : '—';
-      box.textContent = `✓ Extracción exitosa — ${count} servicios obtenidos de ${provider.toUpperCase()} (project-${projectId})`;
-    } else {
-      box.className = 'result-box error';
-      box.textContent = `✗ ${data.detail || data.message || JSON.stringify(data)}`;
-    }
-  } catch(e) {
-    box.className = 'result-box error';
-    box.textContent = `✗ Error de conexión: ${e.message}`;
-  }
-}
-
-function setKPIs(total, services, providers, topName, topCost) {
-  document.getElementById('kpiTotal').textContent     = total;
-  document.getElementById('kpiServices').textContent  = services;
-  document.getElementById('kpiProviders').textContent = providers;
-  document.getElementById('kpiTop').textContent       = topName;
-  document.getElementById('kpiTopCost').textContent   = topCost;
-}
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>

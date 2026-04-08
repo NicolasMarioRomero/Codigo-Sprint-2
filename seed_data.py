@@ -1,8 +1,7 @@
 """
 seed_data.py
 Pobla la base de datos con datos de prueba para el experimento.
-Ejecutar desde el host: python seed_data.py
-O desde Docker:        docker compose exec backend python seed_data.py
+Ejecutar: python seed_data.py
 
 Genera ~60.000 registros (10 empresas x 5 proyectos x 6 servicios x 200 meses)
 para simular un entorno real bajo carga.
