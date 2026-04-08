@@ -1,14 +1,10 @@
 ### Tácticas implementadas
 
-**ASR Latencia (< 3s bajo 5000 usuarios):**
-- Load Balancer + Múltiples copias de procesamiento (Nginx + 2 instancias FastAPI)
-- Caché en memoria (Redis, TTL 30s para dashboard)
-- Pool de conexiones SQL (SQLAlchemy pool_size=20, max_overflow=40)
-- Agregación SQL (GROUP BY en DB, no en Python)
-- Compresión gzip en Nginx
+## 5. Resultados esperados
 
-**ASR Escalabilidad (100% éxito bajo sobrecarga):**
-- Patrón Strategy (CloudProvider abstracto → agnóstico al proveedor)
-- Cola de mensajes (Celery + Redis)
-- Reintentos con backoff exponencial (2^n + jitter, máx 5 reintentos)
-- task_acks_late=True (mensaje confirmado solo si la tarea termina)
+| Métrica | Valor esperado | Relación con el ASR |
+|---------|---------------|---------------------|
+| **Tasa de éxito** | 100% | El ASR exige explícitamente un 100% de éxito en todas las peticiones realizadas. |
+| **Tasa de errores** | 0% | Cualquier error HTTP representa un incumplimiento directo del ASR. |
+| **Tiempo de respuesta promedio** | Entre 4 ms y 200 ms | El tiempo incluye posibles reintentos ocasionales; el rango refleja el comportamiento esperado del backoff exponencial en condiciones normales de fallo (10%). |
+| **Agnósticismo (AWS vs GCP)** | Tasa de éxito idéntica en ambos proveedores | El ASR exige captura agnóstica: si el Patrón Strategy funciona correctamente, el resultado no debe variar entre proveedor AWS y GCP. |

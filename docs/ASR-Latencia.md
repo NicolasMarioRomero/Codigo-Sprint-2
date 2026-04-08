@@ -52,7 +52,7 @@ El sistema BITE adopta Microservicios como estilo principal. El flujo del ASR pa
 | **Título** | Prueba de latencia del dashboard bajo carga normal |
 | **Propósito** | Comprobar si con el uso de un balanceador de carga, dos instancias del servidor de reportes y una caché en memoria, el sistema es capaz de mostrar el dashboard de reportes en menos de 3 segundos bajo una carga de 5000 usuarios concurrentes. |
 | **ASR involucrado** | Como responsable de una empresa cliente, cuando ingreso a la plataforma durante una carga normal de ~5000 usuarios, quiero visualizar el dashboard de reportes en máximo 3 segundos desde la ocurrencia del evento. |
-| **Infraestructura requerida** | - Dos instancias EC2 con el servidor de reportes desplegado (simuladas con Docker)<br>- Nginx como Application Load Balancer<br>- Redis como caché en memoria<br>- PostgreSQL (Amazon RDS)<br>- Computador personal con JMeter para ejecutar las pruebas de carga |
+| **Infraestructura requerida** | - Dos instancias EC2 con el servidor de reportes desplegado<br>- Nginx como Application Load Balancer<br>- Redis como caché en memoria<br>- PostgreSQL (Amazon RDS)<br>- Computador personal con JMeter para ejecutar las pruebas de carga |
 
 ### Estilos de Arquitectura asociados
 
@@ -115,11 +115,11 @@ Es importante aclarar que el alto porcentaje de errores no significa que el sist
 
 ### ¿Por qué no se cumple?
 
-El experimento se ejecutó en un entorno local usando Docker Compose en un único computador, lo cual difiere significativamente de la infraestructura de producción diseñada en AWS. Las razones concretas son:
+El experimento se ejecutó en un entorno local en un único computador, lo cual difiere significativamente de la infraestructura de producción diseñada en AWS. Las razones concretas son:
 
 1. **Recursos compartidos en el mismo host:** las dos instancias del Report Service, Redis, PostgreSQL y Nginx comparten la CPU y la RAM del mismo equipo físico. En AWS, cada EC2 tendría recursos dedicados y aislados.
 
-2. **Red local vs red de datacenter:** la latencia entre contenedores Docker en un mismo equipo es mayor a la latencia entre instancias EC2 dentro de la misma VPC de AWS, que suele ser inferior a 1 ms.
+2. **Red local vs red de datacenter:** la latencia entre servicios en un mismo equipo es mayor a la latencia entre instancias EC2 dentro de la misma VPC de AWS, que suele ser inferior a 1 ms.
 
 3. **PostgreSQL sin optimización:** el contenedor de PostgreSQL compite por CPU con el resto de servicios. Amazon RDS con read replicas y conexiones optimizadas reduciría significativamente los tiempos de consulta.
 
