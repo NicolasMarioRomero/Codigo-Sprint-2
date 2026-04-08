@@ -3,13 +3,31 @@
 # Los servicios corren directamente en EC2 con uvicorn + systemd.
 #
 # Uso: ./deploy.sh [KEY_PATH]
-# Ejemplo: ./deploy.sh ~/.ssh/labsuser.pem
+# Ejemplo: ./deploy.sh ~/Downloads/labsuser.pem
+# Si no se pasa el argumento, se busca en rutas comunes de AWS Academy.
 
 set -e
 
 # ── Configuración ──────────────────────────────────────────
-KEY_PATH="${1:-~/.ssh/labsuser.pem}"
 TERRAFORM_DIR="./terraform"
+
+# ── Resolver ruta del .pem ─────────────────────────────────
+if [ -n "$1" ]; then
+    KEY_PATH="$1"
+elif [ -f "$HOME/Downloads/labsuser.pem" ]; then
+    KEY_PATH="$HOME/Downloads/labsuser.pem"
+elif [ -f "$HOME/.ssh/labsuser.pem" ]; then
+    KEY_PATH="$HOME/.ssh/labsuser.pem"
+else
+    echo -e "\033[0;31m[✗]\033[0m No se encontró labsuser.pem."
+    echo "    Descárgalo desde AWS Academy → Account Details → Download PEM"
+    echo "    Luego ejecuta:  chmod 400 ~/Downloads/labsuser.pem"
+    echo "    Y corre:        ./deploy.sh ~/Downloads/labsuser.pem"
+    exit 1
+fi
+
+# Asegurar permisos correctos del .pem (SSH requiere 400)
+chmod 400 "$KEY_PATH" 2>/dev/null || true
 
 # ── Colores ────────────────────────────────────────────────
 GREEN='\033[0;32m'
@@ -27,7 +45,7 @@ err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 info "Verificando dependencias..."
 command -v terraform >/dev/null 2>&1 || err "Terraform no encontrado. Ejecuta: sh install_terraform.sh"
 command -v ssh       >/dev/null 2>&1 || err "SSH no encontrado"
-command -v rsync     >/dev/null 2>&1 || err "rsync no encontrado"
+command -v tar       >/dev/null 2>&1 || err "tar no encontrado"
 [ -f "$KEY_PATH" ] || err "Key pair no encontrado: $KEY_PATH"
 
 # ── 2. Terraform: init + apply ─────────────────────────────
@@ -73,17 +91,17 @@ for i in $(seq 1 30); do
 done
 
 # ── 4. Copiar código al servidor ───────────────────────────
-info "Copiando código al servidor..."
-rsync -avz --progress \
-    --exclude='.git' \
-    --exclude='terraform' \
-    --exclude='__pycache__' \
-    --exclude='*.pyc' \
-    --exclude='.env' \
-    --exclude='venv' \
-    --exclude='*.jmx' \
-    -e "ssh $SSH_OPTS" \
-    . ubuntu@$PUBLIC_IP:/home/ubuntu/app/
+info "Copiando código al servidor (tar + ssh)..."
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "mkdir -p /home/ubuntu/app"
+tar czf - \
+    --exclude='./.git' \
+    --exclude='./terraform' \
+    --exclude='./__pycache__' \
+    --exclude='./*.pyc' \
+    --exclude='./.env' \
+    --exclude='./venv' \
+    --exclude='./*.jmx' \
+    . | ssh $SSH_OPTS ubuntu@$PUBLIC_IP "tar xzf - -C /home/ubuntu/app/"
 
 log "Código copiado"
 
