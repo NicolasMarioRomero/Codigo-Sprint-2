@@ -10,7 +10,7 @@ echo "=== BITE Sprint2 - Bootstrap iniciado: $(date) ==="
 
 # ── Actualizar sistema ─────────────────────────────────────
 apt-get update -y
-apt-get upgrade -y
+# Nota: se omite apt-get upgrade para ahorrar espacio (~1-2 GB de parches)
 
 # ── Dependencias base ──────────────────────────────────────
 apt-get install -y \
@@ -49,6 +49,11 @@ systemctl enable redis-server
 
 echo "=== Redis listo ==="
 
+# ── Limpiar caché de apt (libera ~1-2 GB) ─────────────────
+apt-get clean
+rm -rf /var/lib/apt/lists/*
+echo "=== Caché apt limpiada ==="
+
 # ── nginx — se habilita; deploy.sh copiará la configuración ─
 systemctl enable nginx
 
@@ -60,5 +65,4 @@ echo "=== Bootstrap completado: $(date) ==="
 echo "=== Python: $(python3 --version) ==="
 echo "=== PostgreSQL: $(psql --version) ==="
 echo "=== Redis: $(redis-cli --version) ==="
-echo "=== nginx: $(nginx -v 2>&1) ==="
-echo "=== Listo para recibir el código de la app ==="
+echo "=== nginx: $(nginx -v 2>&1

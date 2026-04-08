@@ -14,4 +14,4 @@ app.include_router(reports.router)
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "service": "report-service"}

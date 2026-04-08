@@ -7,4 +7,4 @@ app.include_router(router)
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "extractor"}
+    return {"status": "ok", "service": "extractor-agent"}

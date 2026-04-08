@@ -121,5 +121,5 @@ def trigger_extraction_sync(req: ExtractionRequest):
     # Agotados todos los reintentos
     raise HTTPException(
         status_code=503,
-        detail=f"Extracción fallida tras {MAX_RETRIES} reintentos: {last_exc}",
+        detail=f"No se pudo extraer métricas de '{req.provider}' tras {MAX_RETRIES} intentos: {last_exc}",
     )
