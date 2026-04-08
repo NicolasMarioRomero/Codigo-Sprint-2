@@ -10,12 +10,11 @@ echo "=== BITE Sprint2 - Bootstrap iniciado: $(date) ==="
 
 # ── Actualizar sistema ─────────────────────────────────────
 apt-get update -y
-# Nota: se omite apt-get upgrade para ahorrar espacio (~1-2 GB de parches)
 
 # ── Dependencias base ──────────────────────────────────────
 apt-get install -y \
     ca-certificates curl gnupg lsb-release \
-    git rsync unzip awscli \
+    git rsync unzip \
     python3 python3-pip python3-venv \
     nginx
 
@@ -65,4 +64,4 @@ echo "=== Bootstrap completado: $(date) ==="
 echo "=== Python: $(python3 --version) ==="
 echo "=== PostgreSQL: $(psql --version) ==="
 echo "=== Redis: $(redis-cli --version) ==="
-echo "=== nginx: $(nginx -v 2>&1
+echo "=== nginx: $(nginx -v 2>&1) ==="

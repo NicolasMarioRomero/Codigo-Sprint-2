@@ -68,7 +68,7 @@ cd ..
 
 # ── 3. Esperar a que la instancia esté lista ───────────────
 info "Esperando que la instancia arranque (~90 segundos para bootstrap)..."
-sleep 30
+sleep 60
 
 SSH_OPTS="-i $KEY_PATH -o StrictHostKeyChecking=no -o ConnectTimeout=10"
 RETRIES=20
@@ -84,7 +84,7 @@ done
 
 # Esperar a que el bootstrap (user_data.sh) termine de instalar PostgreSQL y Redis
 info "Esperando que PostgreSQL y Redis estén listos..."
-for i in $(seq 1 30); do
+for i in $(seq 1 50); do
     PG_OK=$(ssh $SSH_OPTS ubuntu@$PUBLIC_IP "pg_isready -h localhost -U postgres" 2>/dev/null && echo "ok" || echo "no")
     if [ "$PG_OK" = "ok" ]; then
         log "PostgreSQL listo"
