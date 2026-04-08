@@ -9,6 +9,7 @@ exec > /var/log/user_data.log 2>&1
 echo "=== BITE Sprint2 - Bootstrap iniciado: $(date) ==="
 
 apt-get update -y
+sleep 30
 
 apt-get install -y \
     ca-certificates curl gnupg lsb-release \

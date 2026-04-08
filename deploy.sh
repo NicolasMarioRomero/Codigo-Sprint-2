@@ -88,6 +88,35 @@ ssh $SSH_OPTS ubuntu@$PUBLIC_IP "sudo bash -s" << 'ENDSSH'
     set -e
     export DEBIAN_FRONTEND=noninteractive
 
+    # Esperar a que user_data.sh termine de ejecutarse completamente
+    echo "→ Esperando que user_data.sh finalice..."
+    WAIT=0
+    until grep -q "Bootstrap completado" /var/log/user_data.log 2>/dev/null; do
+        WAIT=$((WAIT+5))
+        echo "  user_data en progreso (${WAIT}s)..."
+        sleep 5
+        [ $WAIT -ge 300 ] && echo "TIMEOUT esperando user_data" && exit 1
+    done
+    echo "→ user_data completado tras ${WAIT}s"
+
+    # Detener actualizaciones automáticas que puedan competir por el lock
+    systemctl stop unattended-upgrades apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+    systemctl kill --kill-who=all apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+
+    # Esperar a que todos los locks de apt queden libres
+    WAIT=0
+    until ! fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
+       && ! fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
+       && ! fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+        WAIT=$((WAIT+5))
+        echo "  apt ocupado (${WAIT}s)..."
+        sleep 5
+        [ $WAIT -ge 120 ] && echo "TIMEOUT esperando apt lock" && exit 1
+    done
+    echo "→ apt libre, instalando paquetes..."
+
+    # nginx y python3-venv ya vienen de user_data.sh — solo instalar lo que faltas
+    apt-get update -y
     apt-get install -y postgresql postgresql-contrib redis-server
 
     # ── Configurar PostgreSQL ──────────────────────────────
