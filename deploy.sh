@@ -49,6 +49,11 @@ command -v tar       >/dev/null 2>&1 || err "tar no encontrado"
 [ -f "$KEY_PATH" ] || err "Key pair no encontrado: $KEY_PATH"
 
 # ── 2. Terraform: init + apply ─────────────────────────────
+info "Liberando caché de Terraform para evitar 'no space left on device'..."
+rm -rf ~/.terraform.d/plugin-cache
+rm -rf "${TERRAFORM_DIR}/.terraform"
+mkdir -p ~/.terraform.d/plugin-cache
+
 info "Inicializando Terraform..."
 cd "$TERRAFORM_DIR"
 terraform init -upgrade
