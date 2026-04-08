@@ -115,15 +115,19 @@ info "Creando virtualenvs e instalando dependencias Python..."
 ssh $SSH_OPTS ubuntu@$PUBLIC_IP "
     # Backend
     python3 -m venv /home/ubuntu/venv-backend
-    /home/ubuntu/venv-backend/bin/pip install --quiet --upgrade pip
-    /home/ubuntu/venv-backend/bin/pip install --quiet -r /home/ubuntu/app/Backend/requirements.txt
+    /home/ubuntu/venv-backend/bin/pip install --quiet --no-cache-dir --upgrade pip
+    /home/ubuntu/venv-backend/bin/pip install --quiet --no-cache-dir -r /home/ubuntu/app/Backend/requirements.txt
     echo '→ Backend deps OK'
 
     # Extractor
     python3 -m venv /home/ubuntu/venv-extractor
-    /home/ubuntu/venv-extractor/bin/pip install --quiet --upgrade pip
-    /home/ubuntu/venv-extractor/bin/pip install --quiet -r /home/ubuntu/app/Extractor/requirements.txt
+    /home/ubuntu/venv-extractor/bin/pip install --quiet --no-cache-dir --upgrade pip
+    /home/ubuntu/venv-extractor/bin/pip install --quiet --no-cache-dir -r /home/ubuntu/app/Extractor/requirements.txt
     echo '→ Extractor deps OK'
+
+    # Limpiar caché de pip (no se necesita después de instalar)
+    rm -rf /home/ubuntu/.cache/pip
+    echo '→ Caché pip limpiada'
 "
 log "Dependencias instaladas"
 
@@ -284,11 +288,4 @@ echo -e "${YELLOW}  │  jmeter_latencia.jmx      → HOST = $PUBLIC_IP  PORT = 
 echo -e "${YELLOW}  │  jmeter_escalabilidad.jmx → HOST = $PUBLIC_IP  PORT = 8001${NC}"
 echo -e "${YELLOW}  └────────────────────────────────────────────────────┘${NC}"
 echo ""
-echo -e "  SSH: ssh -i $KEY_PATH ubuntu@$PUBLIC_IP"
-echo ""
-echo -e "  Logs de servicios:"
-echo -e "    sudo journalctl -u bite-backend-1 -f"
-echo -e "    sudo journalctl -u bite-backend-2 -f"
-echo -e "    sudo journalctl -u bite-extractor -f"
-echo -e "    sudo journalctl -u bite-celery -f"
-echo ""
+echo -e "  SSH

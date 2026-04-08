@@ -86,5 +86,5 @@ def extract_metrics(self, company_id: int, project_id: int, provider_name: str):
         raise self.retry(exc=exc)
 
     except Exception as exc:
-        logger.error(f"[Extractor] Error inesperado: {exc}")
+        logger.error(f"[Extractor] Error inesperado con {provider_name}: {exc}")
         raise
