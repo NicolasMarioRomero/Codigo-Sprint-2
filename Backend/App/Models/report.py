@@ -12,6 +12,7 @@ class Report(Base):
     company_id = Column(Integer, index=True)
     project_id = Column(Integer, index=True)
     service_name = Column(String)   # EC2, S3, Lambda, etc.
+    provider = Column(String, default="aws")  # aws | gcp | azure
     cost = Column(Float)
     usage = Column(Float)
     currency = Column(String, default="USD")
