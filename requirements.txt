@@ -1,0 +1,26 @@
+# ── Django core ────────────────────────────────────────────
+Django==4.2.13
+gunicorn==21.2.0
+
+# ── Base de datos ──────────────────────────────────────────
+psycopg2-binary==2.9.9          # PostgreSQL
+pymongo==4.7.2                  # MongoDB (Experimento Disponibilidad)
+djongo==1.3.6                   # Django ORM → MongoDB
+
+# ── Mensajería ─────────────────────────────────────────────
+pika==1.3.2                     # RabbitMQ client (pub/sub directo)
+celery==5.3.6                   # Cola de tareas asíncronas (Extractor)
+redis==5.0.3                    # Cliente Redis (caché de reportes + backend Celery)
+
+# ── Seguridad / Auth0 ──────────────────────────────────────
+cryptography==42.0.5            # Fernet AES-256 (Vault credenciales)
+python-jose[cryptography]==3.3.0 # JWT decode
+social-auth-app-django==5.4.0   # Auth0 backend
+requests==2.31.0
+
+# ── GeoIP (regla geo del detector ASR29) ──────────────────
+geoip2==4.8.0
+
+# ── Utilidades ─────────────────────────────────────────────
+python-dotenv==1.0.1
+django-cors-headers==4.3.1
