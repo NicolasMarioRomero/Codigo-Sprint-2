@@ -1,24 +1,18 @@
 #!/bin/bash
-# user_data.sh — Bootstrap EC2 principal (app + configsvr + mongos)
-# Instala Python, nginx y Docker. El resto lo instala deploy.sh via SSH.
+# user_data_shard.sh — Bootstrap para EC2s de shard MongoDB
+# Instala Docker + docker-compose. El deploy.sh copia el compose y lo levanta.
 
 set -e
 exec > /var/log/user_data.log 2>&1
 
-echo "=== BITE App Bootstrap iniciado: $(date) ==="
+echo "=== BITE Shard Bootstrap iniciado: $(date) ==="
 
 apt-get update -y
-sleep 30
+sleep 20
 
-apt-get install -y \
-    ca-certificates curl gnupg lsb-release \
-    git rsync unzip \
-    python3 python3-pip python3-venv \
-    nginx
+apt-get install -y ca-certificates curl gnupg lsb-release git
 
-systemctl enable nginx
-
-# ── Docker (para configsvr + mongos) ─────────────────────────
+# ── Docker ────────────────────────────────────────────────────
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
     -o /etc/apt/keyrings/docker.asc
@@ -36,12 +30,8 @@ apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 systemctl enable docker && systemctl start docker
 usermod -aG docker ubuntu
 
-mkdir -p /home/ubuntu/app
-chown ubuntu:ubuntu /home/ubuntu/app
-
 apt-get clean
 rm -rf /var/lib/apt/lists/*
 
-echo "=== Bootstrap completado: $(date) ==="
-echo "=== Python: $(python3 --version) ==="
+echo "=== Shard Bootstrap completado: $(date) ==="
 echo "=== Docker: $(docker --version) ==="
