@@ -435,7 +435,19 @@ rs.initiate({
 print('Config RS iniciado');
 \"
 "
-sleep 10
+
+info "Esperando primario del Config RS..."
+for i in $(seq 1 24); do
+    STATUS=$(ssh $SSH_OPTS ubuntu@$APP_IP \
+        "sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval 'rs.isMaster().ismaster' 2>/dev/null" \
+        || echo "false")
+    if [ "$STATUS" = "true" ]; then
+        log "Config RS primario elegido (intento $i)"
+        break
+    fi
+    warn "Esperando primario config RS ($i/24)..."
+    sleep 5
+done
 
 info "Inicializando Shard 1 Replica Set (${SHARD1_PRIV})..."
 ssh $SSH_OPTS ubuntu@$SHARD1_IP "
@@ -485,8 +497,22 @@ print('Shard 3 RS iniciado');
 \"
 "
 
-info "Esperando elección de primarios (15s)..."
-sleep 15
+info "Esperando primarios de los 3 shards..."
+for shard_num in 1 2 3; do
+    eval "SHARD_IP=\$SHARD${shard_num}_IP"
+    CONTAINER="shard${shard_num}a"
+    for i in $(seq 1 24); do
+        STATUS=$(ssh $SSH_OPTS ubuntu@$SHARD_IP \
+            "docker exec $CONTAINER mongosh --port 27018 --quiet --eval 'rs.isMaster().ismaster' 2>/dev/null" \
+            || echo "false")
+        if [ "$STATUS" = "true" ]; then
+            log "Shard $shard_num primario elegido (intento $i)"
+            break
+        fi
+        warn "Esperando primario shard $shard_num ($i/24)..."
+        sleep 5
+    done
+done
 
 info "Registrando shards en mongos y habilitando sharding..."
 ssh $SSH_OPTS ubuntu@$APP_IP "
