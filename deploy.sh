@@ -455,6 +455,11 @@ for i in $(seq 1 24); do
     sleep 5
 done
 
+info "Reiniciando mongos para reconectar al Config RS..."
+ssh $SSH_OPTS ubuntu@$APP_IP "sudo docker restart mongos"
+sleep 15
+log "mongos reiniciado"
+
 info "Inicializando Shard 1 Replica Set (${SHARD1_PRIV})..."
 ssh $SSH_OPTS ubuntu@$SHARD1_IP "
 docker exec shard1a mongosh --port 27018 --quiet --eval \"
