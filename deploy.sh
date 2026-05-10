@@ -422,19 +422,25 @@ log "Config Server y mongos arrancados"
 info "Inicializando Config Server Replica Set..."
 ssh $SSH_OPTS ubuntu@$APP_IP "
 sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval \"
-rs.initiate({
-  _id: 'rs_config',
-  configsvr: true,
-  members: [
-    { _id: 0, host: 'configsvr1:27019', priority: 2 },
-    { _id: 1, host: 'configsvr2:27020', priority: 1 },
-    { _id: 2, host: 'configsvr3:27021', priority: 1 }
-  ],
-  settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
-});
-print('Config RS iniciado');
+try {
+  rs.initiate({
+    _id: 'rs_config',
+    configsvr: true,
+    members: [
+      { _id: 0, host: 'configsvr1:27019', priority: 2 },
+      { _id: 1, host: 'configsvr2:27020', priority: 1 },
+      { _id: 2, host: 'configsvr3:27021', priority: 1 }
+    ],
+    settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
+  });
+  print('Config RS iniciado');
+} catch(e) {
+  if (e.codeName === 'AlreadyInitialized' || e.message.includes('already initialized')) {
+    print('Config RS ya inicializado, continuando...');
+  } else { throw e; }
+}
 \"
-"
+" || true
 
 info "Esperando primario del Config RS..."
 for i in $(seq 1 24); do
@@ -452,50 +458,68 @@ done
 info "Inicializando Shard 1 Replica Set (${SHARD1_PRIV})..."
 ssh $SSH_OPTS ubuntu@$SHARD1_IP "
 docker exec shard1a mongosh --port 27018 --quiet --eval \"
-rs.initiate({
-  _id: 'rs_shard1',
-  members: [
-    { _id: 0, host: '${SHARD1_PRIV}:27018', priority: 2 },
-    { _id: 1, host: '${SHARD1_PRIV}:27019', priority: 1 },
-    { _id: 2, host: '${SHARD1_PRIV}:27020', priority: 1 }
-  ],
-  settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
-});
-print('Shard 1 RS iniciado');
+try {
+  rs.initiate({
+    _id: 'rs_shard1',
+    members: [
+      { _id: 0, host: '${SHARD1_PRIV}:27018', priority: 2 },
+      { _id: 1, host: '${SHARD1_PRIV}:27019', priority: 1 },
+      { _id: 2, host: '${SHARD1_PRIV}:27020', priority: 1 }
+    ],
+    settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
+  });
+  print('Shard 1 RS iniciado');
+} catch(e) {
+  if (e.codeName === 'AlreadyInitialized' || e.message.includes('already initialized')) {
+    print('Shard 1 RS ya inicializado, continuando...');
+  } else { throw e; }
+}
 \"
-"
+" || true
 
 info "Inicializando Shard 2 Replica Set (${SHARD2_PRIV})..."
 ssh $SSH_OPTS ubuntu@$SHARD2_IP "
 docker exec shard2a mongosh --port 27018 --quiet --eval \"
-rs.initiate({
-  _id: 'rs_shard2',
-  members: [
-    { _id: 0, host: '${SHARD2_PRIV}:27018', priority: 2 },
-    { _id: 1, host: '${SHARD2_PRIV}:27019', priority: 1 },
-    { _id: 2, host: '${SHARD2_PRIV}:27020', priority: 1 }
-  ],
-  settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
-});
-print('Shard 2 RS iniciado');
+try {
+  rs.initiate({
+    _id: 'rs_shard2',
+    members: [
+      { _id: 0, host: '${SHARD2_PRIV}:27018', priority: 2 },
+      { _id: 1, host: '${SHARD2_PRIV}:27019', priority: 1 },
+      { _id: 2, host: '${SHARD2_PRIV}:27020', priority: 1 }
+    ],
+    settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
+  });
+  print('Shard 2 RS iniciado');
+} catch(e) {
+  if (e.codeName === 'AlreadyInitialized' || e.message.includes('already initialized')) {
+    print('Shard 2 RS ya inicializado, continuando...');
+  } else { throw e; }
+}
 \"
-"
+" || true
 
 info "Inicializando Shard 3 Replica Set (${SHARD3_PRIV})..."
 ssh $SSH_OPTS ubuntu@$SHARD3_IP "
 docker exec shard3a mongosh --port 27018 --quiet --eval \"
-rs.initiate({
-  _id: 'rs_shard3',
-  members: [
-    { _id: 0, host: '${SHARD3_PRIV}:27018', priority: 2 },
-    { _id: 1, host: '${SHARD3_PRIV}:27019', priority: 1 },
-    { _id: 2, host: '${SHARD3_PRIV}:27020', priority: 1 }
-  ],
-  settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
-});
-print('Shard 3 RS iniciado');
+try {
+  rs.initiate({
+    _id: 'rs_shard3',
+    members: [
+      { _id: 0, host: '${SHARD3_PRIV}:27018', priority: 2 },
+      { _id: 1, host: '${SHARD3_PRIV}:27019', priority: 1 },
+      { _id: 2, host: '${SHARD3_PRIV}:27020', priority: 1 }
+    ],
+    settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
+  });
+  print('Shard 3 RS iniciado');
+} catch(e) {
+  if (e.codeName === 'AlreadyInitialized' || e.message.includes('already initialized')) {
+    print('Shard 3 RS ya inicializado, continuando...');
+  } else { throw e; }
+}
 \"
-"
+" || true
 
 info "Esperando primarios de los 3 shards..."
 for shard_num in 1 2 3; do
@@ -517,16 +541,24 @@ done
 info "Registrando shards en mongos y habilitando sharding..."
 ssh $SSH_OPTS ubuntu@$APP_IP "
 sudo docker exec mongos mongosh --port 27017 --quiet --eval \"
-sh.addShard('rs_shard1/${SHARD1_PRIV}:27018,${SHARD1_PRIV}:27019,${SHARD1_PRIV}:27020');
-sh.addShard('rs_shard2/${SHARD2_PRIV}:27018,${SHARD2_PRIV}:27019,${SHARD2_PRIV}:27020');
-sh.addShard('rs_shard3/${SHARD3_PRIV}:27018,${SHARD3_PRIV}:27019,${SHARD3_PRIV}:27020');
+function addShardSafe(connStr) {
+  try { sh.addShard(connStr); }
+  catch(e) {
+    if (e.message && e.message.includes('already')) {
+      print('Shard ya registrado: ' + connStr);
+    } else { throw e; }
+  }
+}
+addShardSafe('rs_shard1/${SHARD1_PRIV}:27018,${SHARD1_PRIV}:27019,${SHARD1_PRIV}:27020');
+addShardSafe('rs_shard2/${SHARD2_PRIV}:27018,${SHARD2_PRIV}:27019,${SHARD2_PRIV}:27020');
+addShardSafe('rs_shard3/${SHARD3_PRIV}:27018,${SHARD3_PRIV}:27019,${SHARD3_PRIV}:27020');
 
-sh.enableSharding('bite_db');
+try { sh.enableSharding('bite_db'); } catch(e) { print('sharding ya habilitado'); }
 
 db = db.getSiblingDB('bite_db');
-db.createCollection('places');
-db.places.createIndex({ category: 1, _id: 1 });
-sh.shardCollection('bite_db.places', { category: 1, _id: 1 });
+try { db.createCollection('places'); } catch(e) {}
+try { db.places.createIndex({ category: 1, _id: 1 }); } catch(e) {}
+try { sh.shardCollection('bite_db.places', { category: 1, _id: 1 }); } catch(e) { print('places ya sharded'); }
 
 print('Cluster sharded listo');
 sh.status();
