@@ -62,11 +62,9 @@ wait_ssh() {
 # ══════════════════════════════════════════════════════════════
 # 1. Terraform — levantar las 4 EC2s
 # ══════════════════════════════════════════════════════════════
-info "Limpiando caché Terraform..."
-rm -rf ~/.terraform.d/plugin-cache "${TERRAFORM_DIR}/.terraform"
-mkdir -p ~/.terraform.d/plugin-cache
-
 info "Inicializando Terraform..."
+export TF_PLUGIN_CACHE_DIR=/tmp/tf-plugin-cache
+mkdir -p "$TF_PLUGIN_CACHE_DIR"
 cd "$TERRAFORM_DIR"
 terraform init -upgrade
 
