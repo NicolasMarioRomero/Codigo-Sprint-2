@@ -457,8 +457,21 @@ done
 
 info "Reiniciando mongos para reconectar al Config RS..."
 ssh $SSH_OPTS ubuntu@$APP_IP "sudo docker restart mongos"
-sleep 15
-log "mongos reiniciado"
+sleep 5
+
+info "Esperando que mongos conecte al Config RS..."
+for i in $(seq 1 24); do
+    STATUS=$(ssh $SSH_OPTS ubuntu@$APP_IP \
+        "sudo docker exec mongos mongosh --port 27017 --quiet --eval \
+        'try { db.getSiblingDB(\"config\").shards.find().toArray(); print(\"ok\"); } catch(e) { print(\"err\"); }' \
+        2>/dev/null" || echo "err")
+    if echo "$STATUS" | grep -q "^ok$"; then
+        log "mongos conectado al Config RS (intento $i)"
+        break
+    fi
+    warn "mongos no conectado todavia ($i/24)..."
+    sleep 5
+done
 
 info "Inicializando Shard 1 Replica Set (${SHARD1_PRIV})..."
 ssh $SSH_OPTS ubuntu@$SHARD1_IP "
