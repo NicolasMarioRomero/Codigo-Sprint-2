@@ -140,38 +140,30 @@ ssh $SSH_OPTS ubuntu@$APP_IP "sudo bash -s" << 'ENDSSH'
     systemctl start redis-server && systemctl enable redis-server
     echo "→ Redis listo"
 
-    # ── RabbitMQ ───────────────────────────────────────────────
-    # Ubuntu Noble trae Erlang 25; RabbitMQ >= 3.13 requiere Erlang 26+.
-    # Usamos los repos de Cloudsmith del equipo de RabbitMQ que incluyen Erlang 26.
-    apt-get remove -y erlang-base erlang-asn1 erlang-crypto erlang-eldap \
-        erlang-ftp erlang-inets erlang-mnesia erlang-os-mon erlang-parsetools \
-        erlang-public-key erlang-runtime-tools erlang-snmp erlang-ssl \
-        erlang-syntax-tools erlang-tftp erlang-tools erlang-xmerl 2>/dev/null || true
-    apt-get autoremove -y 2>/dev/null || true
+    # ── RabbitMQ via Docker ────────────────────────────────────
+    # Evitamos el conflicto Erlang 25/26 usando la imagen oficial de Docker.
+    # Docker ya está instalado por user_data.sh.
+    docker rm -f rabbitmq 2>/dev/null || true
+    docker run -d \
+        --name rabbitmq \
+        --restart unless-stopped \
+        --hostname rabbitmq \
+        -p 5672:5672 \
+        -p 15672:15672 \
+        -e RABBITMQ_DEFAULT_USER=monitoring_user \
+        -e RABBITMQ_DEFAULT_PASS=isis2503 \
+        rabbitmq:3.13-management
 
-    curl -1sLf 'https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-erlang/setup.deb.sh' | bash
-    curl -1sLf 'https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-server/setup.deb.sh' | bash
+    echo "→ Esperando RabbitMQ (30s)..."
+    sleep 30
 
-    apt-get update -y
-    apt-get install -y erlang-base erlang-asn1 erlang-crypto erlang-eldap \
-        erlang-ftp erlang-inets erlang-mnesia erlang-os-mon erlang-parsetools \
-        erlang-public-key erlang-runtime-tools erlang-snmp erlang-ssl \
-        erlang-syntax-tools erlang-tftp erlang-tools erlang-xmerl
-    apt-get install -y rabbitmq-server
-
-    systemctl enable rabbitmq-server && systemctl start rabbitmq-server
-    rabbitmq-plugins enable rabbitmq_management 2>/dev/null || true
-
-    rabbitmqctl add_user monitoring_user isis2503 2>/dev/null || true
-    rabbitmqctl set_permissions -p / monitoring_user ".*" ".*" ".*"
-    rabbitmqctl set_user_tags monitoring_user administrator
-
-    sleep 5
-    rabbitmqadmin -u monitoring_user -p isis2503 declare exchange \
-        name=security_events type=topic durable=true 2>/dev/null || true
-    rabbitmqadmin -u monitoring_user -p isis2503 declare exchange \
-        name=logs type=topic durable=true 2>/dev/null || true
-    echo "→ RabbitMQ listo"
+    docker exec rabbitmq rabbitmqadmin \
+        -u monitoring_user -p isis2503 \
+        declare exchange name=security_events type=topic durable=true 2>/dev/null || true
+    docker exec rabbitmq rabbitmqadmin \
+        -u monitoring_user -p isis2503 \
+        declare exchange name=logs type=topic durable=true 2>/dev/null || true
+    echo "→ RabbitMQ listo (Docker)"
 
     echo "=== Servicios base instalados ==="
 ENDSSH
