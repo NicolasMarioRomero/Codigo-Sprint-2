@@ -30,7 +30,7 @@ data "aws_ami" "ubuntu" {
 # ── Security Group ─────────────────────────────────────────────
 resource "aws_security_group" "bite_sg" {
   name        = "${var.project_prefix}-sg"
-  description = "BITE Sprint 3 — ASR Latencia, Escalabilidad, Seguridad, Disponibilidad"
+  description = "BITE Sprint 3 - ASR Latencia, Escalabilidad, Seguridad, Disponibilidad"
 
   # SSH
   ingress {
