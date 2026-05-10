@@ -13,7 +13,7 @@ urlpatterns = [
     path('health/', health),
     # Sprint 2 (migrado de FastAPI)
     path('api/v1/', include('reports.urls')),            # Reportes + Dashboard
-    path('api/v1/', include('extractor.urls')),          # Extractor cloud
+    path('api/v1/', include('Extractor.urls')),          # Extractor cloud
     # Sprint 3
     path('credentials/', include('credentials.urls')),   # ASR29
     path('test/', include('log_handlers.urls')),         # ASR30

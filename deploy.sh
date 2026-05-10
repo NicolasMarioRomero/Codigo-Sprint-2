@@ -295,7 +295,7 @@ make_service "bite-extractor"  "BITE Django extractor (8001)" \
     "network.target redis.service"
 
 make_service "bite-celery"     "BITE Celery Worker" \
-    "${VENV}/bin/celery -A extractor.tasks.celery_app worker --loglevel=info --concurrency=4" \
+    "${VENV}/bin/celery -A Extractor.tasks.celery_app worker --loglevel=info --concurrency=4" \
     "network.target redis.service rabbitmq-server.service"
 
 make_service "bite-detector"   "BITE Detector ASR29" \

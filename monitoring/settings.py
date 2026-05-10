@@ -26,7 +26,7 @@ INSTALLED_APPS = [
     'corsheaders',
     # Apps Sprint 2 (migradas de FastAPI)
     'reports',          # Reportes de consumo cloud (+ caché Redis)
-    'extractor',        # Extracción de métricas AWS/GCP (Celery + RabbitMQ)
+    'Extractor',        # Extracción de métricas AWS/GCP (Celery + RabbitMQ)
     # Apps Sprint 3
     'credentials',      # ASR29: Vault de credenciales
     'detector',         # ASR29: Detección de anomalías
