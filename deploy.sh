@@ -1,28 +1,17 @@
 #!/bin/bash
-# deploy.sh — Despliegue completo BITE.co en AWS (4 EC2s)
-#
-# Infraestructura levantada por Terraform:
-#   bite-sprint3-app      (t3.large)  — Django + PostgreSQL + Redis + RabbitMQ
-#                                       + Celery + Detector + Revoker + Notifier
-#                                       + LogStore + nginx + ConfigSvr + mongos
-#   bite-sprint3-shard1   (t3.medium) — MongoDB Shard 1 (3 nodos via Docker)
-#   bite-sprint3-shard2   (t3.medium) — MongoDB Shard 2 (3 nodos via Docker)
-#   bite-sprint3-shard3   (t3.medium) — MongoDB Shard 3 (3 nodos via Docker)
-#
-# Puertos expuestos:
-#   80   → nginx LB → reports/dashboard       (JMeter latencia)
-#   8001 → extractor directo                  (JMeter escalabilidad)
+# deploy.sh — Script de despliegue completo en AWS (sin Docker)
+# Los servicios corren directamente en EC2 con uvicorn + systemd.
 #
 # Uso: ./deploy.sh [KEY_PATH]
-#
-# Prerequisitos: terraform instalado, AWS credentials configuradas
-#   (AWS Academy: exportar variables desde Account Details)
+# Ejemplo: ./deploy.sh ~/Downloads/labsuser.pem
+# Si no se pasa el argumento, se busca en rutas comunes de AWS Academy.
 
 set -e
 
+# ── Configuración ──────────────────────────────────────────
 TERRAFORM_DIR="./terraform"
 
-# ── Resolver .pem ──────────────────────────────────────────────
+# ── Resolver ruta del .pem ─────────────────────────────────
 if [ -n "$1" ]; then
     KEY_PATH="$1"
 elif [ -f "$HOME/Downloads/labsuser.pem" ]; then
@@ -30,153 +19,129 @@ elif [ -f "$HOME/Downloads/labsuser.pem" ]; then
 elif [ -f "$HOME/.ssh/labsuser.pem" ]; then
     KEY_PATH="$HOME/.ssh/labsuser.pem"
 else
-    echo "[✗] No se encontró labsuser.pem."
+    echo -e "\033[0;31m[✗]\033[0m No se encontró labsuser.pem."
     echo "    Descárgalo desde AWS Academy → Account Details → Download PEM"
-    echo "    Luego: chmod 400 ~/labsuser.pem && ./deploy.sh ~/labsuser.pem"
+    echo "    Luego ejecuta:  chmod 400 ~/Downloads/labsuser.pem"
+    echo "    Y corre:        ./deploy.sh ~/Downloads/labsuser.pem"
     exit 1
 fi
+
+# Asegurar permisos correctos del .pem (SSH requiere 400)
 chmod 400 "$KEY_PATH" 2>/dev/null || true
 
-GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; RED='\033[0;31m'; NC='\033[0m'
+# ── Colores ────────────────────────────────────────────────
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+RED='\033[0;31m'
+NC='\033[0m'
+
 log()  { echo -e "${GREEN}[✓]${NC} $1"; }
 info() { echo -e "${CYAN}[→]${NC} $1"; }
 warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
-SSH_OPTS="-i $KEY_PATH -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=30"
+# ── 1. Verificar dependencias ──────────────────────────────
+info "Verificando dependencias..."
+command -v terraform >/dev/null 2>&1 || err "Terraform no encontrado. Ejecuta: sh install_terraform.sh"
+command -v ssh       >/dev/null 2>&1 || err "SSH no encontrado"
+command -v tar       >/dev/null 2>&1 || err "tar no encontrado"
+[ -f "$KEY_PATH" ] || err "Key pair no encontrado: $KEY_PATH"
 
-wait_ssh() {
-    local host="$1" label="$2"
-    info "Esperando SSH en $label ($host)..."
-    for i in $(seq 1 25); do
-        if ssh $SSH_OPTS ubuntu@$host "echo ok" 2>/dev/null; then
-            log "SSH disponible en $label"
-            return 0
-        fi
-        warn "Intento $i/25 — esperando SSH en $label..."
-        sleep 15
-    done
-    err "La instancia $label no respondió a tiempo"
-}
-
-# ══════════════════════════════════════════════════════════════
-# 1. Terraform — levantar las 4 EC2s
-# ══════════════════════════════════════════════════════════════
-info "Limpiando caché Terraform..."
-rm -rf ~/.terraform.d/plugin-cache "${TERRAFORM_DIR}/.terraform"
+# ── 2. Terraform: init + apply ─────────────────────────────
+info "Liberando caché de Terraform para evitar 'no space left on device'..."
+rm -rf ~/.terraform.d/plugin-cache
+rm -rf "${TERRAFORM_DIR}/.terraform"
 mkdir -p ~/.terraform.d/plugin-cache
 
 info "Inicializando Terraform..."
 cd "$TERRAFORM_DIR"
 terraform init -upgrade
 
-info "Aplicando infraestructura (4 EC2s)..."
-terraform apply -auto-approve -var="private_key_path=$KEY_PATH"
+info "Aplicando infraestructura en AWS..."
+terraform apply -auto-approve \
+    -var="private_key_path=$KEY_PATH"
 
-APP_IP=$(terraform output -raw app_public_ip)
-APP_PRIV=$(terraform output -raw app_private_ip)
-SHARD1_IP=$(terraform output -json shard_public_ips | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0])")
-SHARD2_IP=$(terraform output -json shard_public_ips | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[1])")
-SHARD3_IP=$(terraform output -json shard_public_ips | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[2])")
-SHARD1_PRIV=$(terraform output -json shard_private_ips | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0])")
-SHARD2_PRIV=$(terraform output -json shard_private_ips | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[1])")
-SHARD3_PRIV=$(terraform output -json shard_private_ips | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[2])")
-
-log "App:    $APP_IP (privada: $APP_PRIV)"
-log "Shard1: $SHARD1_IP (privada: $SHARD1_PRIV)"
-log "Shard2: $SHARD2_IP (privada: $SHARD2_PRIV)"
-log "Shard3: $SHARD3_IP (privada: $SHARD3_PRIV)"
+PUBLIC_IP=$(terraform output -raw public_ip)
+log "Instancia EC2 creada: $PUBLIC_IP"
 cd ..
 
+# ── 3. Esperar a que la instancia esté lista ───────────────
+info "Esperando que la instancia arranque (~30 segundos para bootstrap mínimo)..."
 sleep 30
 
-# ══════════════════════════════════════════════════════════════
-# 2. Esperar SSH en todas las instancias
-# ══════════════════════════════════════════════════════════════
-wait_ssh "$APP_IP"    "app"
-wait_ssh "$SHARD1_IP" "shard1"
-wait_ssh "$SHARD2_IP" "shard2"
-wait_ssh "$SHARD3_IP" "shard3"
+SSH_OPTS="-i $KEY_PATH -o StrictHostKeyChecking=no -o ConnectTimeout=10"
+RETRIES=20
+for i in $(seq 1 $RETRIES); do
+    if ssh $SSH_OPTS ubuntu@$PUBLIC_IP "python3 --version" 2>/dev/null; then
+        log "SSH disponible y Python listo"
+        break
+    fi
+    warn "Intento $i/$RETRIES — esperando SSH..."
+    sleep 15
+    [ $i -eq $RETRIES ] && err "La instancia no respondió a tiempo"
+done
 
-# ══════════════════════════════════════════════════════════════
-# 3. Instalar servicios base en la EC2 principal
-# ══════════════════════════════════════════════════════════════
-info "Instalando servicios en EC2 principal..."
-ssh $SSH_OPTS ubuntu@$APP_IP "sudo bash -s" << 'ENDSSH'
+# ── 3b. Instalar PostgreSQL y Redis directamente vía SSH ───
+info "Instalando PostgreSQL y Redis en EC2..."
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "sudo bash -s" << 'ENDSSH'
     set -e
     export DEBIAN_FRONTEND=noninteractive
 
+    # Esperar a que user_data.sh termine de ejecutarse completamente
     echo "→ Esperando que user_data.sh finalice..."
     WAIT=0
     until grep -q "Bootstrap completado" /var/log/user_data.log 2>/dev/null; do
-        WAIT=$((WAIT+5)); echo "  user_data en progreso (${WAIT}s)..."; sleep 5
+        WAIT=$((WAIT+5))
+        echo "  user_data en progreso (${WAIT}s)..."
+        sleep 5
         [ $WAIT -ge 300 ] && echo "TIMEOUT esperando user_data" && exit 1
     done
-    echo "→ user_data completado"
+    echo "→ user_data completado tras ${WAIT}s"
 
-    # Liberar apt locks
+    # Detener actualizaciones automáticas que puedan competir por el lock
     systemctl stop unattended-upgrades apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+    systemctl kill --kill-who=all apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+
+    # Esperar a que todos los locks de apt queden libres
     WAIT=0
     until ! fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
-       && ! fuser /var/lib/dpkg/lock >/dev/null 2>&1; do
-        WAIT=$((WAIT+5)); echo "  apt ocupado (${WAIT}s)..."; sleep 5
-        [ $WAIT -ge 120 ] && echo "TIMEOUT apt lock" && exit 1
+       && ! fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
+       && ! fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do
+        WAIT=$((WAIT+5))
+        echo "  apt ocupado (${WAIT}s)..."
+        sleep 5
+        [ $WAIT -ge 120 ] && echo "TIMEOUT esperando apt lock" && exit 1
     done
+    echo "→ apt libre, instalando paquetes..."
 
+    # nginx y python3-venv ya vienen de user_data.sh — solo instalar lo que faltas
     apt-get update -y
     apt-get install -y postgresql postgresql-contrib redis-server
 
-    # ── PostgreSQL ─────────────────────────────────────────────
-    systemctl start postgresql && systemctl enable postgresql
-    sudo -u postgres psql -c "CREATE USER monitoring_user WITH PASSWORD 'isis2503';" 2>/dev/null || true
-    sudo -u postgres psql -c "ALTER USER monitoring_user WITH PASSWORD 'isis2503';" 2>/dev/null || true
-    sudo -u postgres psql -c "CREATE DATABASE monitoring_db OWNER monitoring_user;" 2>/dev/null || true
-    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE monitoring_db TO monitoring_user;" 2>/dev/null || true
+    # ── Configurar PostgreSQL ──────────────────────────────
+    systemctl start postgresql
+    systemctl enable postgresql
+
+    sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'password';"
+    sudo -u postgres psql -c "CREATE DATABASE cloudcosts;" 2>/dev/null || true
+
     PG_HBA=$(sudo -u postgres psql -t -c "SHOW hba_file;" | tr -d ' ')
     sed -i "s|scram-sha-256|md5|g" "$PG_HBA"
     systemctl restart postgresql
-    echo "→ PostgreSQL listo"
 
-    # ── Redis ──────────────────────────────────────────────────
+    # ── Configurar Redis ───────────────────────────────────
     sed -i 's/^bind .*/bind 127.0.0.1/' /etc/redis/redis.conf
-    systemctl start redis-server && systemctl enable redis-server
-    echo "→ Redis listo"
+    systemctl start redis-server
+    systemctl enable redis-server
 
-    # ── RabbitMQ ───────────────────────────────────────────────
-    apt-get install -y erlang-base erlang-asn1 erlang-crypto erlang-eldap \
-        erlang-ftp erlang-inets erlang-mnesia erlang-os-mon erlang-parsetools \
-        erlang-public-key erlang-runtime-tools erlang-snmp erlang-ssl \
-        erlang-syntax-tools erlang-tftp erlang-tools erlang-xmerl
-
-    curl -fsSL https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey | apt-key add - 2>/dev/null || true
-    echo "deb https://packagecloud.io/rabbitmq/rabbitmq-server/ubuntu/ $(lsb_release -cs) main" \
-        > /etc/apt/sources.list.d/rabbitmq.list
-    apt-get update -y 2>/dev/null || true
-    apt-get install -y rabbitmq-server
-
-    systemctl enable rabbitmq-server && systemctl start rabbitmq-server
-    rabbitmq-plugins enable rabbitmq_management 2>/dev/null || true
-
-    rabbitmqctl add_user monitoring_user isis2503 2>/dev/null || true
-    rabbitmqctl set_permissions -p / monitoring_user ".*" ".*" ".*"
-    rabbitmqctl set_user_tags monitoring_user administrator
-
-    sleep 5
-    rabbitmqadmin -u monitoring_user -p isis2503 declare exchange \
-        name=security_events type=topic durable=true 2>/dev/null || true
-    rabbitmqadmin -u monitoring_user -p isis2503 declare exchange \
-        name=logs type=topic durable=true 2>/dev/null || true
-    echo "→ RabbitMQ listo"
-
-    echo "=== Servicios base instalados ==="
+    echo "=== PostgreSQL y Redis listos ==="
 ENDSSH
-log "PostgreSQL, Redis, RabbitMQ listos"
+log "PostgreSQL y Redis instalados y configurados"
 
-# ══════════════════════════════════════════════════════════════
-# 4. Copiar código a la EC2 principal
-# ══════════════════════════════════════════════════════════════
-info "Copiando código al servidor principal..."
-ssh $SSH_OPTS ubuntu@$APP_IP "mkdir -p /home/ubuntu/app"
+# ── 4. Copiar código al servidor ───────────────────────────
+info "Copiando código al servidor (tar + ssh)..."
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "mkdir -p /home/ubuntu/app"
 tar czf - \
     --exclude='./.git' \
     --exclude='./terraform' \
@@ -185,408 +150,186 @@ tar czf - \
     --exclude='./.env' \
     --exclude='./venv' \
     --exclude='./*.jmx' \
-    --exclude='./deployment' \
-    . | ssh $SSH_OPTS ubuntu@$APP_IP "tar xzf - -C /home/ubuntu/app/"
+    . | ssh $SSH_OPTS ubuntu@$PUBLIC_IP "tar xzf - -C /home/ubuntu/app/"
+
 log "Código copiado"
 
-# ══════════════════════════════════════════════════════════════
-# 5. Virtualenv + dependencias Python
-# ══════════════════════════════════════════════════════════════
-info "Instalando dependencias Python..."
-ssh $SSH_OPTS ubuntu@$APP_IP "
-    python3 -m venv /home/ubuntu/venv
-    /home/ubuntu/venv/bin/pip install --quiet --no-cache-dir --upgrade pip
-    /home/ubuntu/venv/bin/pip install --quiet --no-cache-dir -r /home/ubuntu/app/requirements.txt
+# ── 5. Crear virtualenvs e instalar dependencias ───────────
+info "Creando virtualenvs e instalando dependencias Python..."
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "
+    # Backend
+    python3 -m venv /home/ubuntu/venv-backend
+    /home/ubuntu/venv-backend/bin/pip install --quiet --no-cache-dir --upgrade pip
+    /home/ubuntu/venv-backend/bin/pip install --quiet --no-cache-dir -r /home/ubuntu/app/Backend/requirements.txt
+    echo '→ Backend deps OK'
+
+    # Extractor
+    python3 -m venv /home/ubuntu/venv-extractor
+    /home/ubuntu/venv-extractor/bin/pip install --quiet --no-cache-dir --upgrade pip
+    /home/ubuntu/venv-extractor/bin/pip install --quiet --no-cache-dir -r /home/ubuntu/app/Extractor/requirements.txt
+    echo '→ Extractor deps OK'
+
+    # Limpiar caché de pip (no se necesita después de instalar)
     rm -rf /home/ubuntu/.cache/pip
-    echo '→ Dependencias OK'
+    echo '→ Caché pip limpiada'
 "
 log "Dependencias instaladas"
 
-# ══════════════════════════════════════════════════════════════
-# 6. Generar VAULT_KEY y escribir .env
-# ══════════════════════════════════════════════════════════════
-info "Generando variables de entorno..."
-VAULT_KEY=$(ssh $SSH_OPTS ubuntu@$APP_IP \
-    "/home/ubuntu/venv/bin/python -c \
-    'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'")
-
-# MONGO_URI apunta al mongos corriendo en localhost (Docker)
-ssh $SSH_OPTS ubuntu@$APP_IP "cat > /home/ubuntu/app/.env << EOF
-DJANGO_SETTINGS_MODULE=monitoring.settings
-DJANGO_SECRET_KEY=bite-sprint3-$(date +%s)
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=monitoring_db
-DB_USER=monitoring_user
-DB_PASSWORD=isis2503
-REDIS_HOST=localhost
-REDIS_PORT=6379
-RABBITMQ_HOST=localhost
-RABBITMQ_PORT=5672
-RABBITMQ_USER=monitoring_user
-RABBITMQ_PASSWORD=isis2503
-MONGO_URI=mongodb://localhost:27017/bite_db
-VAULT_KEY=$VAULT_KEY
-AMBIENTE=dev
-SMTP_USER=
-SMTP_APP_PASSWORD=
-ADMIN_EMAIL=
-EOF
-chmod 600 /home/ubuntu/app/.env"
-log "Variables de entorno configuradas"
-
-# ══════════════════════════════════════════════════════════════
-# 7. Migraciones Django
-# ══════════════════════════════════════════════════════════════
-info "Ejecutando migraciones Django..."
-ssh $SSH_OPTS ubuntu@$APP_IP "
-    cd /home/ubuntu/app
-    set -a && source .env && set +a
-    /home/ubuntu/venv/bin/python manage.py migrate --noinput
-    echo '→ Migraciones OK'
-"
-log "Migraciones aplicadas"
-
-# ══════════════════════════════════════════════════════════════
-# 8. Crear servicios systemd en EC2 principal
-# ══════════════════════════════════════════════════════════════
+# ── 6. Crear servicios systemd ─────────────────────────────
 info "Creando servicios systemd..."
-ssh $SSH_OPTS ubuntu@$APP_IP "sudo bash -s" << 'ENDSSH'
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "sudo bash -s" << 'ENDSSH'
 
-VENV="/home/ubuntu/venv"
-APP="/home/ubuntu/app"
-ENV_FILE="/home/ubuntu/app/.env"
+DB_URL="postgresql://postgres:password@localhost:5432/cloudcosts"
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
 
-make_service() {
-    local name="$1" desc="$2" cmd="$3" after="${4:-network.target}"
-    cat > /etc/systemd/system/${name}.service << EOF
+# ── bite-backend-1 (puerto 8000) ────────────────────────────
+cat > /etc/systemd/system/bite-backend-1.service << EOF
 [Unit]
-Description=${desc}
-After=${after}
+Description=BITE Report Service instancia 1
+After=network.target postgresql.service
 
 [Service]
 User=ubuntu
-WorkingDirectory=${APP}
-EnvironmentFile=${ENV_FILE}
-ExecStart=${cmd}
+WorkingDirectory=/home/ubuntu/app/Backend
+Environment="DATABASE_URL=${DB_URL}"
+Environment="REDIS_HOST=${REDIS_HOST}"
+Environment="REDIS_PORT=${REDIS_PORT}"
+ExecStart=/home/ubuntu/venv-backend/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
 EOF
-}
 
-GUNICORN="${VENV}/bin/gunicorn monitoring.wsgi:application"
-PYTHON="${VENV}/bin/python"
+# ── bite-backend-2 (puerto 8002) ────────────────────────────
+cat > /etc/systemd/system/bite-backend-2.service << EOF
+[Unit]
+Description=BITE Report Service instancia 2
+After=network.target postgresql.service
 
-make_service "bite-backend-1"  "BITE Django instancia 1 (8000)" \
-    "${GUNICORN} --bind 0.0.0.0:8000 --workers 4 --timeout 120" \
-    "network.target postgresql.service"
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/app/Backend
+Environment="DATABASE_URL=${DB_URL}"
+Environment="REDIS_HOST=${REDIS_HOST}"
+Environment="REDIS_PORT=${REDIS_PORT}"
+ExecStart=/home/ubuntu/venv-backend/bin/uvicorn main:app --host 0.0.0.0 --port 8002 --workers 4
+Restart=always
+RestartSec=3
 
-make_service "bite-backend-2"  "BITE Django instancia 2 (8002)" \
-    "${GUNICORN} --bind 0.0.0.0:8002 --workers 4 --timeout 120" \
-    "network.target postgresql.service"
+[Install]
+WantedBy=multi-user.target
+EOF
 
-make_service "bite-extractor"  "BITE Django extractor (8001)" \
-    "${GUNICORN} --bind 0.0.0.0:8001 --workers 2 --timeout 120" \
-    "network.target redis.service"
+# ── bite-extractor (puerto 8001) ────────────────────────────
+cat > /etc/systemd/system/bite-extractor.service << EOF
+[Unit]
+Description=BITE Extractor Agent
+After=network.target redis.service
 
-make_service "bite-celery"     "BITE Celery Worker" \
-    "${VENV}/bin/celery -A extractor.tasks.celery_app worker --loglevel=info --concurrency=4" \
-    "network.target redis.service rabbitmq-server.service"
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/app/Extractor
+Environment="REDIS_HOST=${REDIS_HOST}"
+Environment="REDIS_PORT=${REDIS_PORT}"
+ExecStart=/home/ubuntu/venv-extractor/bin/uvicorn main:app --host 0.0.0.0 --port 8001 --workers 2
+Restart=always
+RestartSec=3
 
-make_service "bite-detector"   "BITE Detector ASR29" \
-    "${PYTHON} detector/consumer.py" \
-    "network.target rabbitmq-server.service postgresql.service"
+[Install]
+WantedBy=multi-user.target
+EOF
 
-make_service "bite-revoker"    "BITE Revoker ASR29 (dev)" \
-    "${PYTHON} revoker/consumer.py" \
-    "network.target rabbitmq-server.service postgresql.service"
+# ── bite-celery (worker de Celery para el extractor) ────────
+cat > /etc/systemd/system/bite-celery.service << EOF
+[Unit]
+Description=BITE Celery Worker
+After=network.target redis.service
 
-make_service "bite-notifier"   "BITE Notifier ASR29" \
-    "${PYTHON} notifier/consumer.py" \
-    "network.target rabbitmq-server.service postgresql.service"
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/app/Extractor
+Environment="REDIS_HOST=${REDIS_HOST}"
+Environment="REDIS_PORT=${REDIS_PORT}"
+ExecStart=/home/ubuntu/venv-extractor/bin/celery -A app.tasks.extract_task.celery_app worker --loglevel=info --concurrency=4
+Restart=always
+RestartSec=3
 
-make_service "bite-logstore"   "BITE Log Store ASR30" \
-    "${PYTHON} log_handlers/log_store_consumer.py" \
-    "network.target rabbitmq-server.service"
+[Install]
+WantedBy=multi-user.target
+EOF
 
 systemctl daemon-reload
-systemctl enable \
-    bite-backend-1 bite-backend-2 bite-extractor bite-celery \
-    bite-detector bite-revoker bite-notifier bite-logstore
-echo "→ Servicios systemd creados"
+systemctl enable bite-backend-1 bite-backend-2 bite-extractor bite-celery
+echo "→ Servicios systemd creados y habilitados"
 ENDSSH
+
 log "Servicios systemd configurados"
 
-# ══════════════════════════════════════════════════════════════
-# 9. nginx
-# ══════════════════════════════════════════════════════════════
+# ── 7. Configurar nginx ────────────────────────────────────
 info "Configurando nginx..."
-ssh $SSH_OPTS ubuntu@$APP_IP "sudo bash -s" << 'ENDSSH'
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "sudo bash -s" << 'ENDSSH'
     cp /home/ubuntu/app/nginx/nginx.conf /etc/nginx/nginx.conf
     nginx -t && systemctl restart nginx
     echo "→ nginx OK"
 ENDSSH
 log "nginx configurado"
 
-# ══════════════════════════════════════════════════════════════
-# 10. Arrancar servicios de la app
-# ══════════════════════════════════════════════════════════════
-info "Arrancando servicios de la app..."
-ssh $SSH_OPTS ubuntu@$APP_IP "
-    sudo systemctl start \
-        bite-backend-1 bite-backend-2 bite-extractor bite-celery \
-        bite-detector bite-revoker bite-notifier bite-logstore
+# ── 8. Arrancar todos los servicios ───────────────────────
+info "Arrancando servicios..."
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "
+    sudo systemctl start bite-backend-1 bite-backend-2 bite-extractor bite-celery
     sleep 5
-    sudo systemctl is-active --quiet bite-backend-1 && echo '→ backends OK' || echo '→ backends FALLO'
+    echo '── Estado de servicios ──'
+    sudo systemctl is-active bite-backend-1 bite-backend-2 bite-extractor bite-celery
 "
-log "App arrancada"
+log "Servicios arrancados"
 
-# ══════════════════════════════════════════════════════════════
-# 11. Seed de datos
-# ══════════════════════════════════════════════════════════════
-info "Cargando datos de prueba..."
-ssh $SSH_OPTS ubuntu@$APP_IP "
+# ── 9. Seed de datos ───────────────────────────────────────
+info "Cargando datos de prueba en la base de datos..."
+ssh $SSH_OPTS ubuntu@$PUBLIC_IP "
     cd /home/ubuntu/app
-    set -a && source .env && set +a
-    /home/ubuntu/venv/bin/python seed_data.py
-    /home/ubuntu/venv/bin/python scripts/seed_history.py
+    DATABASE_URL='postgresql://postgres:password@localhost:5432/cloudcosts' \
+        /home/ubuntu/venv-backend/bin/python seed_data.py
 "
-log "Datos de prueba cargados"
+log "Base de datos cargada con datos de prueba (~60.000 registros)"
 
-# ══════════════════════════════════════════════════════════════
-# 12. Desplegar MongoDB shards en las 3 EC2s
-# ══════════════════════════════════════════════════════════════
-info "Desplegando MongoDB shards..."
-
-deploy_shard() {
-    local shard_ip="$1" shard_num="$2"
-    info "  Desplegando shard $shard_num en $shard_ip..."
-
-    # Esperar que Docker esté listo (instalado por user_data_shard.sh)
-    ssh $SSH_OPTS ubuntu@$shard_ip "
-        echo '→ Esperando Docker...'
-        WAIT=0
-        until grep -q 'Shard Bootstrap completado' /var/log/user_data.log 2>/dev/null; do
-            WAIT=\$((WAIT+5)); echo \"  Bootstrap en progreso (\${WAIT}s)...\"; sleep 5
-            [ \$WAIT -ge 300 ] && echo 'TIMEOUT bootstrap' && exit 1
-        done
-        echo '→ Bootstrap OK'
-    "
-
-    # Copiar docker-compose-shard.yml
-    scp $SSH_OPTS \
-        mongo_cluster/docker-compose-shard.yml \
-        ubuntu@${shard_ip}:/home/ubuntu/docker-compose-shard.yml
-
-    # Levantar el shard
-    ssh $SSH_OPTS ubuntu@$shard_ip "
-        cd /home/ubuntu
-        SHARD_NUM=$shard_num docker compose -f docker-compose-shard.yml up -d
-        sleep 10
-        docker ps --format 'table {{.Names}}\t{{.Status}}' | grep shard
-        echo '→ Shard $shard_num contenedores arriba'
-    "
-    log "  Shard $shard_num desplegado en $shard_ip"
-}
-
-deploy_shard "$SHARD1_IP" 1
-deploy_shard "$SHARD2_IP" 2
-deploy_shard "$SHARD3_IP" 3
-
-# ══════════════════════════════════════════════════════════════
-# 13. Desplegar Config Server + mongos en EC2 principal
-# ══════════════════════════════════════════════════════════════
-info "Desplegando Config Server y mongos en EC2 principal..."
-
-ssh $SSH_OPTS ubuntu@$APP_IP "
-    mkdir -p /home/ubuntu/mongo_cluster
-"
-scp $SSH_OPTS \
-    mongo_cluster/docker-compose-configsvr.yml \
-    ubuntu@${APP_IP}:/home/ubuntu/mongo_cluster/docker-compose-configsvr.yml
-
-ssh $SSH_OPTS ubuntu@$APP_IP "
-    cd /home/ubuntu/mongo_cluster
-    sudo docker compose -f docker-compose-configsvr.yml up -d
-    echo '→ Esperando que configsvr arranque (20s)...'
-    sleep 20
-    sudo docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'configsvr|mongos'
-"
-log "Config Server y mongos arrancados"
-
-# ══════════════════════════════════════════════════════════════
-# 14. Inicializar replica sets y sharding
-# ══════════════════════════════════════════════════════════════
-info "Inicializando Config Server Replica Set..."
-ssh $SSH_OPTS ubuntu@$APP_IP "
-sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval \"
-rs.initiate({
-  _id: 'rs_config',
-  configsvr: true,
-  members: [
-    { _id: 0, host: 'configsvr1:27019', priority: 2 },
-    { _id: 1, host: 'configsvr2:27020', priority: 1 },
-    { _id: 2, host: 'configsvr3:27021', priority: 1 }
-  ],
-  settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
-});
-print('Config RS iniciado');
-\"
-"
-sleep 10
-
-info "Inicializando Shard 1 Replica Set (${SHARD1_PRIV})..."
-ssh $SSH_OPTS ubuntu@$SHARD1_IP "
-docker exec shard1a mongosh --port 27018 --quiet --eval \"
-rs.initiate({
-  _id: 'rs_shard1',
-  members: [
-    { _id: 0, host: '${SHARD1_PRIV}:27018', priority: 2 },
-    { _id: 1, host: '${SHARD1_PRIV}:27019', priority: 1 },
-    { _id: 2, host: '${SHARD1_PRIV}:27020', priority: 1 }
-  ],
-  settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
-});
-print('Shard 1 RS iniciado');
-\"
-"
-
-info "Inicializando Shard 2 Replica Set (${SHARD2_PRIV})..."
-ssh $SSH_OPTS ubuntu@$SHARD2_IP "
-docker exec shard2a mongosh --port 27018 --quiet --eval \"
-rs.initiate({
-  _id: 'rs_shard2',
-  members: [
-    { _id: 0, host: '${SHARD2_PRIV}:27018', priority: 2 },
-    { _id: 1, host: '${SHARD2_PRIV}:27019', priority: 1 },
-    { _id: 2, host: '${SHARD2_PRIV}:27020', priority: 1 }
-  ],
-  settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
-});
-print('Shard 2 RS iniciado');
-\"
-"
-
-info "Inicializando Shard 3 Replica Set (${SHARD3_PRIV})..."
-ssh $SSH_OPTS ubuntu@$SHARD3_IP "
-docker exec shard3a mongosh --port 27018 --quiet --eval \"
-rs.initiate({
-  _id: 'rs_shard3',
-  members: [
-    { _id: 0, host: '${SHARD3_PRIV}:27018', priority: 2 },
-    { _id: 1, host: '${SHARD3_PRIV}:27019', priority: 1 },
-    { _id: 2, host: '${SHARD3_PRIV}:27020', priority: 1 }
-  ],
-  settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
-});
-print('Shard 3 RS iniciado');
-\"
-"
-
-info "Esperando elección de primarios (15s)..."
-sleep 15
-
-info "Registrando shards en mongos y habilitando sharding..."
-ssh $SSH_OPTS ubuntu@$APP_IP "
-sudo docker exec mongos mongosh --port 27017 --quiet --eval \"
-sh.addShard('rs_shard1/${SHARD1_PRIV}:27018,${SHARD1_PRIV}:27019,${SHARD1_PRIV}:27020');
-sh.addShard('rs_shard2/${SHARD2_PRIV}:27018,${SHARD2_PRIV}:27019,${SHARD2_PRIV}:27020');
-sh.addShard('rs_shard3/${SHARD3_PRIV}:27018,${SHARD3_PRIV}:27019,${SHARD3_PRIV}:27020');
-
-sh.enableSharding('bite_db');
-
-db = db.getSiblingDB('bite_db');
-db.createCollection('places');
-db.places.createIndex({ category: 1, _id: 1 });
-sh.shardCollection('bite_db.places', { category: 1, _id: 1 });
-
-print('Cluster sharded listo');
-sh.status();
-\"
-"
-log "Cluster MongoDB sharded configurado"
-
-# ══════════════════════════════════════════════════════════════
-# 15. Seed de datos MongoDB
-# ══════════════════════════════════════════════════════════════
-info "Cargando datos en MongoDB (places)..."
-ssh $SSH_OPTS ubuntu@$APP_IP "
-    cd /home/ubuntu/app
-    set -a && source .env && set +a
-    /home/ubuntu/venv/bin/python scripts/seed_places.py 2>/dev/null || \
-    /home/ubuntu/venv/bin/python manage.py seed_places 2>/dev/null || \
-    echo '→ Seed places omitido (script no encontrado)'
-"
-log "Datos MongoDB cargados"
-
-# ══════════════════════════════════════════════════════════════
-# 16. Health checks
-# ══════════════════════════════════════════════════════════════
+# ── 10. Health checks ──────────────────────────────────────
 info "Verificando servicios..."
-sleep 5
+sleep 3
 
-check() {
-    local label="$1" url="$2"
-    local resp=$(curl -sf "$url" 2>/dev/null || echo "ERROR")
-    if echo "$resp" | grep -qiE "ok|places|credentials|status|health"; then
-        log "$label → OK"
-    else
-        warn "$label → FALLO ($url)"
-    fi
-}
+HEALTH=$(curl -sf "http://$PUBLIC_IP/health" || echo "ERROR")
+if echo "$HEALTH" | grep -q "ok"; then
+    log "Backend (nginx → load balancer) responde correctamente"
+else
+    warn "Health check del backend falló. Revisar con:"
+    warn "  ssh -i $KEY_PATH ubuntu@$PUBLIC_IP 'sudo journalctl -u bite-backend-1 --no-pager -n 30'"
+fi
 
-check "Health (puerto 80)"      "http://$APP_IP/health/"
-check "Report empresa 1"        "http://$APP_IP/api/v1/report/1/"
-check "Dashboard empresa 1"     "http://$APP_IP/api/v1/dashboard/1/"
-check "Extractor (puerto 8001)" "http://$APP_IP:8001/health/"
-check "Credentials list"        "http://$APP_IP/credentials/client-test-001/"
-check "Places (MongoDB)"        "http://$APP_IP/places/health/"
-check "Audit log (ASR29)"       "http://$APP_IP/credentials/audit/"
+EXT_HEALTH=$(curl -sf "http://$PUBLIC_IP:8001/health" || echo "ERROR")
+if echo "$EXT_HEALTH" | grep -q "ok"; then
+    log "Extractor responde correctamente"
+else
+    warn "Extractor health check falló. Revisar:"
+    warn "  ssh -i $KEY_PATH ubuntu@$PUBLIC_IP 'sudo journalctl -u bite-extractor --no-pager -n 30'"
+fi
 
-# ══════════════════════════════════════════════════════════════
-# 17. Resumen final
-# ══════════════════════════════════════════════════════════════
+# ── 11. Resumen final ──────────────────────────────────────
 echo ""
-echo -e "${GREEN}══════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}  ✅  DESPLIEGUE COMPLETO — Sprint 2 + Sprint 3 (4 EC2s)${NC}"
-echo -e "${GREEN}══════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  ✅ DESPLIEGUE COMPLETADO (sin Docker)${NC}"
+echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  ${CYAN}── Instancias AWS ────────────────────────────────────────${NC}"
-echo -e "  App:     $APP_IP  (Django + todos los servicios)"
-echo -e "  Shard 1: $SHARD1_IP"
-echo -e "  Shard 2: $SHARD2_IP"
-echo -e "  Shard 3: $SHARD3_IP"
+echo -e "  Frontend / API:   ${CYAN}http://$PUBLIC_IP${NC}"
+echo -e "  API Backend:      ${CYAN}http://$PUBLIC_IP/api/v1/${NC}"
+echo -e "  Extractor:        ${CYAN}http://$PUBLIC_IP:8001/docs${NC}"
+echo -e "  Health check:     ${CYAN}http://$PUBLIC_IP/health${NC}"
 echo ""
-echo -e "  ${CYAN}── Sprint 2 (Latencia / Escalabilidad) ─────────────────${NC}"
-echo -e "  Health:       http://$APP_IP/health/"
-echo -e "  Report:       http://$APP_IP/api/v1/report/1/"
-echo -e "  Dashboard:    http://$APP_IP/api/v1/dashboard/1/"
-echo -e "  Extractor:    http://$APP_IP:8001/api/v1/extract/"
+echo -e "${YELLOW}  ┌─ JMeter — Actualizar HOST en ambos archivos ────────┐${NC}"
+echo -e "${YELLOW}  │  jmeter_latencia.jmx      → HOST = $PUBLIC_IP  PORT = 80${NC}"
+echo -e "${YELLOW}  │  jmeter_escalabilidad.jmx → HOST = $PUBLIC_IP  PORT = 8001${NC}"
+echo -e "${YELLOW}  └────────────────────────────────────────────────────┘${NC}"
 echo ""
-echo -e "  ${CYAN}── ASR29 (Vault de credenciales) ────────────────────────${NC}"
-echo -e "  Registrar:    POST http://$APP_IP/credentials/register/"
-echo -e "  Usar:         POST http://$APP_IP/credentials/use/"
-echo -e "  Audit log:    http://$APP_IP/credentials/audit/"
-echo ""
-echo -e "  ${CYAN}── ASR30 (Enmascaramiento de logs) ──────────────────────${NC}"
-echo -e "  Leak AWS key: http://$APP_IP/test/leak/aws-key/"
-echo -e "  Leak JWT:     http://$APP_IP/test/leak/jwt/"
-echo ""
-echo -e "  ${CYAN}── Disponibilidad (MongoDB Sharded) ─────────────────────${NC}"
-echo -e "  Places:       http://$APP_IP/places/"
-echo -e "  Health Mongo: http://$APP_IP/places/health/"
-echo -e "  Cluster:      mongos en $APP_IP:27017"
-echo -e "  Shards:       $SHARD1_IP / $SHARD2_IP / $SHARD3_IP"
-echo ""
-echo -e "  ${YELLOW}┌─ JMeter ─────────────────────────────────────────────┐${NC}"
-echo -e "  ${YELLOW}│  jmeter_latencia.jmx       HOST=$APP_IP PORT=80     │${NC}"
-echo -e "  ${YELLOW}│  jmeter_escalabilidad.jmx  HOST=$APP_IP PORT=8001   │${NC}"
-echo -e "  ${YELLOW}└──────────────────────────────────────────────────────┘${NC}"
-echo ""
-echo -e "  SSH app: ssh -i $KEY_PATH ubuntu@$APP_IP"
-echo ""
+echo -e "  SSH

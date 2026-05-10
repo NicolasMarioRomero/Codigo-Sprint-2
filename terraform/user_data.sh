@@ -1,11 +1,12 @@
 #!/bin/bash
-# user_data.sh — Bootstrap EC2 principal (app + configsvr + mongos)
-# Instala Python, nginx y Docker. El resto lo instala deploy.sh via SSH.
+# user_data.sh — Bootstrap mínimo de la instancia EC2
+# Solo instala Python y nginx. PostgreSQL y Redis los instala deploy.sh vía SSH
+# para evitar problemas de timing.
 
 set -e
 exec > /var/log/user_data.log 2>&1
 
-echo "=== BITE App Bootstrap iniciado: $(date) ==="
+echo "=== BITE Sprint2 - Bootstrap iniciado: $(date) ==="
 
 apt-get update -y
 sleep 30
@@ -18,24 +19,6 @@ apt-get install -y \
 
 systemctl enable nginx
 
-# ── Docker (para configsvr + mongos) ─────────────────────────
-install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
-    -o /etc/apt/keyrings/docker.asc
-chmod a+r /etc/apt/keyrings/docker.asc
-
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
-  https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
-  > /etc/apt/sources.list.d/docker.list
-
-apt-get update -y
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
-systemctl enable docker && systemctl start docker
-usermod -aG docker ubuntu
-
 mkdir -p /home/ubuntu/app
 chown ubuntu:ubuntu /home/ubuntu/app
 
@@ -44,4 +27,3 @@ rm -rf /var/lib/apt/lists/*
 
 echo "=== Bootstrap completado: $(date) ==="
 echo "=== Python: $(python3 --version) ==="
-echo "=== Docker: $(docker --version) ==="
