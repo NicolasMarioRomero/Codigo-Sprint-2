@@ -141,15 +141,22 @@ ssh $SSH_OPTS ubuntu@$APP_IP "sudo bash -s" << 'ENDSSH'
     echo "→ Redis listo"
 
     # ── RabbitMQ ───────────────────────────────────────────────
+    # Ubuntu Noble trae Erlang 25; RabbitMQ >= 3.13 requiere Erlang 26+.
+    # Usamos los repos de Cloudsmith del equipo de RabbitMQ que incluyen Erlang 26.
+    apt-get remove -y erlang-base erlang-asn1 erlang-crypto erlang-eldap \
+        erlang-ftp erlang-inets erlang-mnesia erlang-os-mon erlang-parsetools \
+        erlang-public-key erlang-runtime-tools erlang-snmp erlang-ssl \
+        erlang-syntax-tools erlang-tftp erlang-tools erlang-xmerl 2>/dev/null || true
+    apt-get autoremove -y 2>/dev/null || true
+
+    curl -1sLf 'https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-erlang/setup.deb.sh' | bash
+    curl -1sLf 'https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-server/setup.deb.sh' | bash
+
+    apt-get update -y
     apt-get install -y erlang-base erlang-asn1 erlang-crypto erlang-eldap \
         erlang-ftp erlang-inets erlang-mnesia erlang-os-mon erlang-parsetools \
         erlang-public-key erlang-runtime-tools erlang-snmp erlang-ssl \
         erlang-syntax-tools erlang-tftp erlang-tools erlang-xmerl
-
-    curl -fsSL https://packagecloud.io/rabbitmq/rabbitmq-server/gpgkey | apt-key add - 2>/dev/null || true
-    echo "deb https://packagecloud.io/rabbitmq/rabbitmq-server/ubuntu/ $(lsb_release -cs) main" \
-        > /etc/apt/sources.list.d/rabbitmq.list
-    apt-get update -y 2>/dev/null || true
     apt-get install -y rabbitmq-server
 
     systemctl enable rabbitmq-server && systemctl start rabbitmq-server
