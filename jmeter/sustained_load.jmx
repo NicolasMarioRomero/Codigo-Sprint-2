@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <!-- ═══════════════════════════════════════════════════════════════════
+         Disponibilidad — Carga sostenida sobre /places/ durante failover
+         100 usuarios concurrentes, 5 minutos. Se inyecta fallo al minuto 2.
+         Verifica disponibilidad > 99.9% y latencia P95 < 500ms.
+         USO: jmeter -n -t sustained_load.jmx -JHOST=<kong_ip> -JPORT=80
+         ═══════════════════════════════════════════════════════════════════ -->
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Disponibilidad - Carga Sostenida con Failover" enabled="true">
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="HOST" elementType="Argument">
+            <stringProp name="Argument.name">HOST</stringProp>
+            <stringProp name="Argument.value">${__P(HOST,localhost)}</stringProp>
+          </elementProp>
+          <elementProp name="PORT" elementType="Argument">
+            <stringProp name="Argument.name">PORT</stringProp>
+            <stringProp name="Argument.value">${__P(PORT,80)}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <hashTree>
+        <!-- Thread Group principal: 100 usuarios, 5 min -->
+        <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Carga en /places/" enabled="true">
+          <intProp name="ThreadGroup.num_threads">100</intProp>
+          <intProp name="ThreadGroup.ramp_time">30</intProp>
+          <boolProp name="ThreadGroup.scheduler">true</boolProp>
+          <stringProp name="ThreadGroup.duration">300</stringProp>
+          <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+            <boolProp name="LoopController.continue_forever">true</boolProp>
+          </elementProp>
+          <hashTree>
+            <!-- GET /places/ -->
+            <HTTPSamplerProxy testname="GET /places/" enabled="true">
+              <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+              <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+              <stringProp name="HTTPSampler.path">/places/</stringProp>
+              <stringProp name="HTTPSampler.method">GET</stringProp>
+            </HTTPSamplerProxy>
+            <hashTree>
+              <!-- Assertion: respuesta debe ser < 500ms -->
+              <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion" testname="Latencia < 500ms" enabled="true">
+                <longProp name="DurationAssertion.duration">500</longProp>
+              </DurationAssertion>
+              <hashTree/>
+              <!-- Assertion: HTTP 200 -->
+              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 200" enabled="true">
+                <collectionProp name="Asserion.test_strings">
+                  <stringProp>200</stringProp>
+                </collectionProp>
+                <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+                <intProp name="Assertion.test_type">8</intProp>
+              </ResponseAssertion>
+              <hashTree/>
+            </hashTree>
+
+            <!-- POST /places/ para generar escrituras -->
+            <HTTPSamplerProxy testname="POST /places/" enabled="true">
+              <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
+              <stringProp name="HTTPSampler.port">${PORT}</stringProp>
+              <stringProp name="HTTPSampler.path">/places/</stringProp>
+              <stringProp name="HTTPSampler.method">POST</stringProp>
+              <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+              <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+                <collectionProp name="Arguments.arguments">
+                  <elementProp name="" elementType="HTTPArgument">
+                    <stringProp name="Argument.value">{"name":"Lugar Test ${__threadNum}","category":"restaurante","lat":4.65,"lon":-74.05,"description":"Test de carga"}</stringProp>
+                    <stringProp name="Argument.metadata">=</stringProp>
+                  </elementProp>
+                </collectionProp>
+              </elementProp>
+              <elementProp name="HTTPSampler.header_manager" elementType="HeaderManager">
+                <collectionProp name="HeaderManager.headers">
+                  <elementProp name="" elementType="Header">
+                    <stringProp name="Header.name">Content-Type</stringProp>
+                    <stringProp name="Header.value">application/json</stringProp>
+                  </elementProp>
+                </collectionProp>
+              </elementProp>
+            </HTTPSamplerProxy>
+            <hashTree/>
+
+            <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Think time 1s" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+            </ConstantTimer>
+            <hashTree/>
+          </hashTree>
+        </ThreadGroup>
+
+        <!-- Aggregate Report para métricas de percentiles -->
+        <ResultCollector guiclass="StatGraphVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <fieldNames>true</fieldNames>
+            </value>
+          </objProp>
+          <stringProp name="filename">results_sustained_load.csv</stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+    </TestPlan>
+  </hashTree>
+</jmeterTestPlan>

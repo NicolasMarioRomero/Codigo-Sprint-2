@@ -11,7 +11,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-# ── AMI: Ubuntu 24.04 LTS (igual que Lab 7 Circuit Breaker) ──
+# ── AMI: Ubuntu 24.04 LTS ─────────────────────────────────────
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"]  # Canonical
@@ -27,10 +27,10 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# ── Security Group ────────────────────────────────────────────
+# ── Security Group ─────────────────────────────────────────────
 resource "aws_security_group" "bite_sg" {
   name        = "${var.project_prefix}-sg"
-  description = "BITE Sprint 3 - Puertos para experimentos ASR Latencia y Escalabilidad"
+  description = "BITE Sprint 3 — ASR Latencia, Escalabilidad, Seguridad, Disponibilidad"
 
   # SSH
   ingress {
@@ -40,7 +40,7 @@ resource "aws_security_group" "bite_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Nginx / Frontend + API Backend (ASR Latencia — JMeter PORT 80)
+  # nginx — JMeter Latencia (puerto 80)
   ingress {
     from_port   = 80
     to_port     = 80
@@ -48,12 +48,21 @@ resource "aws_security_group" "bite_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Extractor directo (ASR Escalabilidad — JMeter PORT 8001)
+  # Extractor directo — JMeter Escalabilidad (puerto 8001)
   ingress {
     from_port   = 8001
     to_port     = 8001
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # MongoDB cluster — puertos shard + configsvr + mongos
+  # Solo accesible entre instancias del mismo Security Group
+  ingress {
+    from_port       = 27017
+    to_port         = 27021
+    protocol        = "tcp"
+    self            = true   # solo entre instancias de este mismo SG
   }
 
   # Todo el trafico saliente
@@ -70,24 +79,44 @@ resource "aws_security_group" "bite_sg" {
   }
 }
 
-# ── EC2 Instance ──────────────────────────────────────────────
-resource "aws_instance" "bite_server" {
+# ── EC2 Principal — App + ConfigSvr + Mongos ──────────────────
+resource "aws_instance" "bite_app" {
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.instance_type
+  instance_type          = var.app_instance_type
   key_name               = var.key_name
   vpc_security_group_ids = [aws_security_group.bite_sg.id]
-
-  # Script de arranque: instala Docker y dependencias del sistema
-  user_data = file("${path.module}/user_data.sh")
+  user_data              = file("${path.module}/user_data.sh")
 
   root_block_device {
-    volume_size = 20  # GB — suficiente para Docker images + PostgreSQL data
+    volume_size = 20
     volume_type = "gp3"
   }
 
   tags = {
-    Name    = "${var.project_prefix}-server"
+    Name    = "${var.project_prefix}-app"
     Project = var.project_prefix
-    ASR     = "Latencia-Escalabilidad"
+    Role    = "app"
+  }
+}
+
+# ── EC2 Shards MongoDB (3 instancias) ─────────────────────────
+resource "aws_instance" "bite_shard" {
+  count                  = 3
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.shard_instance_type
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.bite_sg.id]
+  user_data              = file("${path.module}/user_data_shard.sh")
+
+  root_block_device {
+    volume_size = 15
+    volume_type = "gp3"
+  }
+
+  tags = {
+    Name     = "${var.project_prefix}-shard${count.index + 1}"
+    Project  = var.project_prefix
+    Role     = "mongodb-shard"
+    ShardNum = tostring(count.index + 1)
   }
 }

@@ -1,0 +1,91 @@
+version: "3.8"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MongoDB 7.0 — Shard Replica Set (1 shard × 3 nodos)
+#
+# Este compose se despliega en una EC2 dedicada por shard.
+# La variable SHARD_NUM (1, 2 ó 3) identifica el shard.
+#
+# Puertos fijos en cada EC2:
+#   27018 → nodo primario  (shardNa)
+#   27019 → secundario 1   (shardNb)
+#   27020 → secundario 2   (shardNc)
+#
+# Uso:
+#   SHARD_NUM=1 docker compose -f docker-compose-shard.yml up -d
+#   SHARD_NUM=2 docker compose -f docker-compose-shard.yml up -d
+#   SHARD_NUM=3 docker compose -f docker-compose-shard.yml up -d
+#
+# Tras levantar, inicializar el RS desde el primario:
+#   docker exec -it shard${SHARD_NUM}a mongosh --port 27018 \
+#     --eval "rs.initiate({
+#       _id: 'rs_shard${SHARD_NUM}',
+#       members: [
+#         {_id:0, host:'<EC2_IP>:27018', priority:2},
+#         {_id:1, host:'<EC2_IP>:27019'},
+#         {_id:2, host:'<EC2_IP>:27020'}
+#       ],
+#       settings: { electionTimeoutMillis: 2000 }
+#     })"
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  shard_net:
+    driver: bridge
+
+services:
+  # ── Nodo A — Primario ──────────────────────────────────────────────────────
+  shardNa:
+    image: mongo:7.0
+    container_name: shard${SHARD_NUM:-1}a
+    command: >
+      mongod
+      --shardsvr
+      --replSet rs_shard${SHARD_NUM:-1}
+      --port 27018
+      --bind_ip_all
+    ports:
+      - "27018:27018"
+    networks: [shard_net]
+    volumes:
+      - shardNa_data:/data/db
+    restart: unless-stopped
+
+  # ── Nodo B — Secundario 1 ─────────────────────────────────────────────────
+  shardNb:
+    image: mongo:7.0
+    container_name: shard${SHARD_NUM:-1}b
+    command: >
+      mongod
+      --shardsvr
+      --replSet rs_shard${SHARD_NUM:-1}
+      --port 27019
+      --bind_ip_all
+    ports:
+      - "27019:27019"
+    networks: [shard_net]
+    volumes:
+      - shardNb_data:/data/db
+    restart: unless-stopped
+
+  # ── Nodo C — Secundario 2 ─────────────────────────────────────────────────
+  shardNc:
+    image: mongo:7.0
+    container_name: shard${SHARD_NUM:-1}c
+    command: >
+      mongod
+      --shardsvr
+      --replSet rs_shard${SHARD_NUM:-1}
+      --port 27020
+      --bind_ip_all
+    ports:
+      - "27020:27020"
+    networks: [shard_net]
+    volumes:
+      - shardNc_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  shardNa_data:
+  shardNb_data:
+  shardNc_data:
