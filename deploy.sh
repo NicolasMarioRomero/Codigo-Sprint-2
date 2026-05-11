@@ -450,9 +450,69 @@ for i in $(seq 1 24); do
     sleep 5
 done
 
-info "Reiniciando mongos para reconectar al Config RS..."
-ssh $SSH_OPTS ubuntu@$APP_IP "sudo docker restart mongos"
-sleep 5
+info "Reconfigurando Config RS con IP y arrancando mongos..."
+# En MongoDB 7.0, sh.addShard() falla con "Could not find host matching read
+# preference { mode: 'nearest' } for set rs_config" cuando el miembro del RS
+# está registrado por hostname.  El pool interno del balancer no resuelve el
+# hostname aunque el DNS de Docker funcione en mongosh.
+# Solución: reconfigurar el miembro con su IP y arrancar mongos con esa IP.
+ssh $SSH_OPTS ubuntu@$APP_IP "bash -s" << 'MONGOS_FIX'
+set -e
+
+# 1. Obtener la IP real del contenedor configsvr1 en la red Docker
+CONFIGSVR_IP=$(sudo docker inspect configsvr1 \
+    --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+echo "→ configsvr1 IP en red Docker: $CONFIGSVR_IP"
+
+# 2. Reconfigurar el miembro del RS para usar IP en lugar de hostname
+sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval "
+    var cfg = rs.conf();
+    cfg.members[0].host = '$CONFIGSVR_IP:27019';
+    rs.reconfig(cfg, {force: true});
+    sleep(2000);
+    print('RS host actualizado a: ' + rs.conf().members[0].host);
+"
+
+# 3. Pre-poblar config.settings para evitar que el balancer falle al hacer
+#    refresh durante sh.addShard() (collection vacía == error "nearest")
+sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval "
+    use config;
+    db.settings.updateOne(
+        {_id: 'balancer'},
+        {\$setOnInsert: {_id: 'balancer', stopped: false, mode: 'off'}},
+        {upsert: true}
+    );
+    db.settings.updateOne(
+        {_id: 'autosplit'},
+        {\$setOnInsert: {_id: 'autosplit', enabled: true}},
+        {upsert: true}
+    );
+    print('config.settings pre-poblado (' + db.settings.countDocuments() + ' docs)');
+"
+
+# 4. Obtener nombre de la red Docker donde vive configsvr1
+MONGO_NET=$(sudo docker inspect configsvr1 \
+    --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' \
+    | awk '{print $1}')
+echo "→ Red Docker del configsvr: $MONGO_NET"
+
+# 5. Arrancar mongos apuntando a la IP (no hostname) del configsvr
+sudo docker rm -f mongos 2>/dev/null || true
+sudo docker run -d \
+    --name mongos \
+    --network "$MONGO_NET" \
+    --restart unless-stopped \
+    -p 27017:27017 \
+    mongo:7.0 \
+    mongos \
+      --configdb "rs_config/$CONFIGSVR_IP:27019" \
+      --port 27017 \
+      --bind_ip_all
+
+echo "→ mongos arrancado con --configdb rs_config/$CONFIGSVR_IP:27019"
+MONGOS_FIX
+sleep 10
+log "Config RS reconfigured con IP, mongos arrancado"
 
 info "Esperando que mongos conecte al Config RS..."
 for i in $(seq 1 24); do
