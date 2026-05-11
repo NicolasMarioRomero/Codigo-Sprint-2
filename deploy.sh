@@ -409,26 +409,32 @@ scp $SSH_OPTS \
 
 ssh $SSH_OPTS ubuntu@$APP_IP "
     cd /home/ubuntu/mongo_cluster
+    # Limpiar contenedores viejos para evitar conflictos de nombre
+    sudo docker rm -f configsvr1 configsvr2 configsvr3 mongos 2>/dev/null || true
     sudo docker compose -f docker-compose-configsvr.yml up -d
     echo '→ Esperando que configsvr arranque (20s)...'
     sleep 20
-    sudo docker ps --format 'table {{.Names}}\t{{.Status}}' | grep -E 'configsvr|mongos'
+    sudo docker ps --format 'table {{.Names}}\t{{.Status}}' | grep configsvr
 "
-log "Config Server y mongos arrancados"
+log "Config Server arrancado"
 
 # ══════════════════════════════════════════════════════════════
 # 14. Inicializar replica sets y sharding
 # ══════════════════════════════════════════════════════════════
 info "Inicializando Config Server Replica Set..."
+# Con host network, el contenedor usa la IP privada real del EC2.
+# Inicializamos el RS directamente con esa IP (no hostname Docker).
 ssh $SSH_OPTS ubuntu@$APP_IP "
+PRIV_IP=\$(curl -sf http://169.254.169.254/latest/meta-data/local-ipv4 || hostname -I | awk '{print \$1}')
+echo \"→ IP privada EC2: \$PRIV_IP\"
 sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval \"
 try {
   rs.initiate({
     _id: 'rs_config',
     configsvr: true,
-    members: [{ _id: 0, host: 'configsvr1:27019' }]
+    members: [{ _id: 0, host: '\$PRIV_IP:27019' }]
   });
-  print('Config RS iniciado');
+  print('Config RS iniciado con IP: \$PRIV_IP');
 } catch(e) {
   if (e.codeName === 'AlreadyInitialized' || e.message.includes('already initialized')) {
     print('Config RS ya inicializado, continuando...');
@@ -450,65 +456,42 @@ for i in $(seq 1 24); do
     sleep 5
 done
 
-info "Reconfigurando Config RS con IP y arrancando mongos..."
-# En MongoDB 7.0, sh.addShard() falla con "Could not find host matching read
-# preference { mode: 'nearest' } for set rs_config" cuando el miembro del RS
-# está registrado por hostname.  El pool interno del balancer no resuelve el
-# hostname aunque el DNS de Docker funcione en mongosh.
-# Solución: reconfigurar el miembro con su IP y arrancar mongos con esa IP.
+info "Arrancando mongos en host network..."
+# Con host network en configsvr1 y mongos, ambos usan la IP privada real
+# del EC2 — elimina todos los problemas de resolución DNS de Docker bridge
+# que causaban el error "nearest" en sh.addShard().
 ssh $SSH_OPTS ubuntu@$APP_IP "bash -s" << 'MONGOS_FIX'
 set -e
 
-# 1. Obtener la IP real del contenedor configsvr1 en la red Docker
-CONFIGSVR_IP=$(sudo docker inspect configsvr1 \
-    --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
-echo "→ configsvr1 IP en red Docker: $CONFIGSVR_IP"
+# Obtener la IP privada real del EC2
+PRIV_IP=$(curl -sf http://169.254.169.254/latest/meta-data/local-ipv4 || hostname -I | awk '{print $1}')
+echo "→ IP privada del EC2: $PRIV_IP"
 
-# 2. Reconfigurar el miembro del RS para usar IP en lugar de hostname
-sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval "
-    var cfg = rs.conf();
-    cfg.members[0].host = '$CONFIGSVR_IP:27019';
-    rs.reconfig(cfg, {force: true});
-    sleep(2000);
-    print('RS host actualizado a: ' + rs.conf().members[0].host);
-"
-
-# 3. Pre-poblar config.settings para evitar que el balancer falle al hacer
-#    refresh durante sh.addShard() (collection vacía == error "nearest")
-#    Usamos insertOne+try/catch en lugar de updateOne+$setOnInsert para evitar
-#    problemas de escaping del $ en heredocs de bash.
+# Pre-poblar config.settings directamente en el configsvr
+# (evita que el balancer falle por colección vacía en addShard)
 sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval '
     use config;
     try { db.settings.insertOne({_id: "balancer", stopped: false, mode: "off"}); }
     catch(e) { if (!e.message.includes("duplicate key")) throw e; }
     try { db.settings.insertOne({_id: "autosplit", enabled: true}); }
     catch(e) { if (!e.message.includes("duplicate key")) throw e; }
-    print("config.settings pre-poblado: " + db.settings.countDocuments() + " docs");
+    print("config.settings: " + db.settings.countDocuments() + " docs");
 '
 
-# 4. Obtener nombre de la red Docker donde vive configsvr1
-MONGO_NET=$(sudo docker inspect configsvr1 \
-    --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' \
-    | awk '{print $1}')
-echo "→ Red Docker del configsvr: $MONGO_NET"
-
-# 5. Arrancar mongos apuntando a la IP (no hostname) del configsvr
-sudo docker rm -f mongos 2>/dev/null || true
 sudo docker run -d \
     --name mongos \
-    --network "$MONGO_NET" \
+    --network host \
     --restart unless-stopped \
-    -p 27017:27017 \
     mongo:7.0 \
     mongos \
-      --configdb "rs_config/$CONFIGSVR_IP:27019" \
+      --configdb "rs_config/$PRIV_IP:27019" \
       --port 27017 \
       --bind_ip_all
 
-echo "→ mongos arrancado con --configdb rs_config/$CONFIGSVR_IP:27019"
+echo "→ mongos arrancado en host network con --configdb rs_config/$PRIV_IP:27019"
 MONGOS_FIX
-sleep 10
-log "Config RS reconfigured con IP, mongos arrancado"
+sleep 15
+log "mongos arrancado en host network"
 
 info "Esperando que mongos conecte al Config RS..."
 for i in $(seq 1 24); do

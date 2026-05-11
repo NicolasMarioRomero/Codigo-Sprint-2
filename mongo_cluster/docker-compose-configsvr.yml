@@ -1,86 +1,36 @@
 version: "3.8"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MongoDB 7.0 — Config Server Replica Set + mongos router
+# MongoDB 7.0 — Config Server Replica Set (nodo único, host network)
 #
-# Corre en la EC2 principal junto con la app Django.
-# El configsvr almacena los metadatos del cluster sharded.
-# El mongos recibe las queries de la app y las enruta al shard correcto.
+# IMPORTANTE: usa network_mode: host para evitar problemas de resolución DNS
+# en el balancer del mongos. Con Docker bridge, sh.addShard() falla con:
+#   "Could not find host matching read preference { mode: 'nearest' } for set rs_config"
+# porque el pool interno del balancer no resuelve el hostname del contenedor.
 #
-# Tras levantar, inicializar el RS desde esta EC2:
-#   docker exec -it configsvr1 mongosh --port 27019 --eval "
-#     rs.initiate({
-#       _id: 'rs_config',
-#       configsvr: true,
-#       members: [
-#         {_id:0, host:'configsvr1:27019', priority:2},
-#         {_id:1, host:'configsvr2:27020', priority:1},
-#         {_id:2, host:'configsvr3:27021', priority:1}
-#       ],
-#       settings: { electionTimeoutMillis: 2000 }
-#     })"
+# Con host network, configsvr1 queda en la IP privada real del EC2
+# (ej. 172.31.x.x), que siempre es alcanzable desde cualquier proceso
+# corriendo en la misma máquina — incluido el pool interno del balancer.
+#
+# deploy.sh se encarga de:
+#   1. docker compose up  →  levanta configsvr1 en host network
+#   2. rs.initiate(...)   →  inicia el RS con la IP privada del EC2
+#   3. config.settings pre-poblado (balancer + autosplit)
+#   4. docker run mongos  →  también en host network, apunta a IP privada
 # ─────────────────────────────────────────────────────────────────────────────
 
-networks:
-  mongo_net:
-    driver: bridge
-
 services:
-  # ── Config Server nodo 1 ──────────────────────────────────────
   configsvr1:
     image: mongo:7.0
     container_name: configsvr1
+    network_mode: host
     command: mongod --configsvr --replSet rs_config --port 27019 --bind_ip_all
-    ports:
-      - "27019:27019"
-    networks: [mongo_net]
     volumes:
       - configsvr1_data:/data/db
     restart: unless-stopped
 
-  # ── Config Server nodo 2 ──────────────────────────────────────
-  configsvr2:
-    image: mongo:7.0
-    container_name: configsvr2
-    command: mongod --configsvr --replSet rs_config --port 27020 --bind_ip_all
-    ports:
-      - "27020:27020"
-    networks: [mongo_net]
-    volumes:
-      - configsvr2_data:/data/db
-    restart: unless-stopped
-
-  # ── Config Server nodo 3 ──────────────────────────────────────
-  configsvr3:
-    image: mongo:7.0
-    container_name: configsvr3
-    command: mongod --configsvr --replSet rs_config --port 27021 --bind_ip_all
-    ports:
-      - "27021:27021"
-    networks: [mongo_net]
-    volumes:
-      - configsvr3_data:/data/db
-    restart: unless-stopped
-
-  # ── mongos — query router (puerto 27017 → app Django) ─────────
-  mongos:
-    image: mongo:7.0
-    container_name: mongos
-    command: >
-      mongos
-      --configdb rs_config/configsvr1:27019,configsvr2:27020,configsvr3:27021
-      --port 27017
-      --bind_ip_all
-    ports:
-      - "27017:27017"
-    networks: [mongo_net]
-    depends_on:
-      - configsvr1
-      - configsvr2
-      - configsvr3
-    restart: unless-stopped
+  # mongos se arranca manualmente en deploy.sh con --network host
+  # para que use la IP privada del EC2 como configdb.
 
 volumes:
   configsvr1_data:
-  configsvr2_data:
-  configsvr3_data:
