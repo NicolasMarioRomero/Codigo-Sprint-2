@@ -475,20 +475,16 @@ sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval "
 
 # 3. Pre-poblar config.settings para evitar que el balancer falle al hacer
 #    refresh durante sh.addShard() (collection vacía == error "nearest")
-sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval "
+#    Usamos insertOne+try/catch en lugar de updateOne+$setOnInsert para evitar
+#    problemas de escaping del $ en heredocs de bash.
+sudo docker exec configsvr1 mongosh --port 27019 --quiet --eval '
     use config;
-    db.settings.updateOne(
-        {_id: 'balancer'},
-        {\$setOnInsert: {_id: 'balancer', stopped: false, mode: 'off'}},
-        {upsert: true}
-    );
-    db.settings.updateOne(
-        {_id: 'autosplit'},
-        {\$setOnInsert: {_id: 'autosplit', enabled: true}},
-        {upsert: true}
-    );
-    print('config.settings pre-poblado (' + db.settings.countDocuments() + ' docs)');
-"
+    try { db.settings.insertOne({_id: "balancer", stopped: false, mode: "off"}); }
+    catch(e) { if (!e.message.includes("duplicate key")) throw e; }
+    try { db.settings.insertOne({_id: "autosplit", enabled: true}); }
+    catch(e) { if (!e.message.includes("duplicate key")) throw e; }
+    print("config.settings pre-poblado: " + db.settings.countDocuments() + " docs");
+'
 
 # 4. Obtener nombre de la red Docker donde vive configsvr1
 MONGO_NET=$(sudo docker inspect configsvr1 \
@@ -611,32 +607,69 @@ for shard_num in 1 2 3; do
     done
 done
 
+info "Esperando 45s para que el balancer del mongos se inicialice completamente..."
+# El balancer del mongos usa un pool de conexiones interno independiente al pool
+# principal. Si llamamos addShard antes de que ese pool complete su primer
+# heartbeat al config RS, falla con "nearest" server selection timeout (15s).
+# 45 segundos garantiza que el balancer ya tiene el RS en su topología.
+sleep 45
+
 info "Registrando shards en mongos y habilitando sharding..."
-ssh $SSH_OPTS ubuntu@$APP_IP "
+# Reintenta hasta 5 veces con 15s de pausa — por si el balancer aún no está listo.
+SHARD1_STR="rs_shard1/${SHARD1_PRIV}:27018,${SHARD1_PRIV}:27019,${SHARD1_PRIV}:27020"
+SHARD2_STR="rs_shard2/${SHARD2_PRIV}:27018,${SHARD2_PRIV}:27019,${SHARD2_PRIV}:27020"
+SHARD3_STR="rs_shard3/${SHARD3_PRIV}:27018,${SHARD3_PRIV}:27019,${SHARD3_PRIV}:27020"
+
+SHARDING_OK=false
+for attempt in 1 2 3 4 5; do
+    warn "addShard intento $attempt/5..."
+    RESULT=$(ssh $SSH_OPTS ubuntu@$APP_IP "
 sudo docker exec mongos mongosh --port 27017 --quiet --eval \"
-function addShardSafe(connStr) {
-  try { sh.addShard(connStr); }
-  catch(e) {
-    if (e.message && e.message.includes('already')) {
-      print('Shard ya registrado: ' + connStr);
-    } else { throw e; }
+function addShardSafe(connStr, name) {
+  try {
+    var r = sh.addShard(connStr);
+    print('Shard agregado: ' + name);
+    return true;
+  } catch(e) {
+    if (e.message && (e.message.includes('already') || e.message.includes('exists'))) {
+      print('Shard ya registrado: ' + name);
+      return true;
+    }
+    print('ERROR addShard ' + name + ': ' + e.message);
+    return false;
   }
 }
-addShardSafe('rs_shard1/${SHARD1_PRIV}:27018,${SHARD1_PRIV}:27019,${SHARD1_PRIV}:27020');
-addShardSafe('rs_shard2/${SHARD2_PRIV}:27018,${SHARD2_PRIV}:27019,${SHARD2_PRIV}:27020');
-addShardSafe('rs_shard3/${SHARD3_PRIV}:27018,${SHARD3_PRIV}:27019,${SHARD3_PRIV}:27020');
+var ok1 = addShardSafe('${SHARD1_STR}', 'shard1');
+var ok2 = addShardSafe('${SHARD2_STR}', 'shard2');
+var ok3 = addShardSafe('${SHARD3_STR}', 'shard3');
+print(ok1 && ok2 && ok3 ? 'SHARDS_OK' : 'SHARDS_FAIL');
+\"" 2>/dev/null || echo "SHARDS_FAIL")
 
-try { sh.enableSharding('bite_db'); } catch(e) { print('sharding ya habilitado'); }
+    if echo "$RESULT" | grep -q "SHARDS_OK"; then
+        log "Shards registrados correctamente (intento $attempt)"
+        SHARDING_OK=true
+        break
+    fi
+    warn "addShard falló en intento $attempt, esperando 15s..."
+    sleep 15
+done
+
+if [ "$SHARDING_OK" != "true" ]; then
+    warn "addShard no completó tras 5 intentos — el deploy continúa pero MongoDB puede no estar sharded"
+fi
+
+ssh $SSH_OPTS ubuntu@$APP_IP "
+sudo docker exec mongos mongosh --port 27017 --quiet --eval \"
+try { sh.enableSharding('bite_db'); } catch(e) { print('sharding ya habilitado o error: ' + e.message); }
 
 db = db.getSiblingDB('bite_db');
 try { db.createCollection('places'); } catch(e) {}
 try { db.places.createIndex({ category: 1, _id: 1 }); } catch(e) {}
-try { sh.shardCollection('bite_db.places', { category: 1, _id: 1 }); } catch(e) { print('places ya sharded'); }
+try { sh.shardCollection('bite_db.places', { category: 1, _id: 1 }); } catch(e) { print('places ya sharded o error: ' + e.message); }
 
-print('Cluster sharded listo');
+print('Estado del cluster:');
 sh.status();
-\"
-"
+\""
 log "Cluster MongoDB sharded configurado"
 
 # ══════════════════════════════════════════════════════════════

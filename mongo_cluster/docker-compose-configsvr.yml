@@ -1,24 +1,24 @@
 version: "3.8"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MongoDB 7.0 — Config Server Replica Set (nodo único)
+# MongoDB 7.0 — Config Server Replica Set + mongos router
 #
 # Corre en la EC2 principal junto con la app Django.
 # El configsvr almacena los metadatos del cluster sharded.
+# El mongos recibe las queries de la app y las enruta al shard correcto.
 #
-# NOTA: mongos se arranca manualmente por deploy.sh usando la IP del contenedor
-# en lugar del hostname.  Esto es necesario porque en MongoDB 7.0 el balancer
-# del mongos usa read preference "nearest" para refrescar config.settings, y
-# la resolución de hostname puede fallar en el pool interno de conexiones del
-# balancer aunque el DNS de Docker funcione correctamente desde mongosh.
-#
-# Secuencia de inicialización (manejada automáticamente por deploy.sh):
-#   1. docker compose up  →  levanta configsvr1
-#   2. rs.initiate(...)   →  inicializa el RS con host temporal (hostname)
-#   3. CONFIGSVR_IP=$(docker inspect configsvr1 ...)
-#   4. rs.reconfig(...)   →  cambia host al IP real del contenedor
-#   5. config.settings pre-poblado (balancer + autosplit)
-#   6. docker run mongos  →  --configdb rs_config/$CONFIGSVR_IP:27019
+# Tras levantar, inicializar el RS desde esta EC2:
+#   docker exec -it configsvr1 mongosh --port 27019 --eval "
+#     rs.initiate({
+#       _id: 'rs_config',
+#       configsvr: true,
+#       members: [
+#         {_id:0, host:'configsvr1:27019', priority:2},
+#         {_id:1, host:'configsvr2:27020', priority:1},
+#         {_id:2, host:'configsvr3:27021', priority:1}
+#       ],
+#       settings: { electionTimeoutMillis: 2000 }
+#     })"
 # ─────────────────────────────────────────────────────────────────────────────
 
 networks:
@@ -38,8 +38,49 @@ services:
       - configsvr1_data:/data/db
     restart: unless-stopped
 
-  # mongos se arranca manualmente en deploy.sh (ver nota arriba).
-  # No se define aquí para poder pasarle la IP real de configsvr1 en runtime.
+  # ── Config Server nodo 2 ──────────────────────────────────────
+  configsvr2:
+    image: mongo:7.0
+    container_name: configsvr2
+    command: mongod --configsvr --replSet rs_config --port 27020 --bind_ip_all
+    ports:
+      - "27020:27020"
+    networks: [mongo_net]
+    volumes:
+      - configsvr2_data:/data/db
+    restart: unless-stopped
+
+  # ── Config Server nodo 3 ──────────────────────────────────────
+  configsvr3:
+    image: mongo:7.0
+    container_name: configsvr3
+    command: mongod --configsvr --replSet rs_config --port 27021 --bind_ip_all
+    ports:
+      - "27021:27021"
+    networks: [mongo_net]
+    volumes:
+      - configsvr3_data:/data/db
+    restart: unless-stopped
+
+  # ── mongos — query router (puerto 27017 → app Django) ─────────
+  mongos:
+    image: mongo:7.0
+    container_name: mongos
+    command: >
+      mongos
+      --configdb rs_config/configsvr1:27019,configsvr2:27020,configsvr3:27021
+      --port 27017
+      --bind_ip_all
+    ports:
+      - "27017:27017"
+    networks: [mongo_net]
+    depends_on:
+      - configsvr1
+      - configsvr2
+      - configsvr3
+    restart: unless-stopped
 
 volumes:
   configsvr1_data:
+  configsvr2_data:
+  configsvr3_data:
