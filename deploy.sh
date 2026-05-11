@@ -426,12 +426,7 @@ try {
   rs.initiate({
     _id: 'rs_config',
     configsvr: true,
-    members: [
-      { _id: 0, host: 'configsvr1:27019', priority: 2 },
-      { _id: 1, host: 'configsvr2:27020', priority: 1 },
-      { _id: 2, host: 'configsvr3:27021', priority: 1 }
-    ],
-    settings: { electionTimeoutMillis: 2000, heartbeatIntervalMillis: 500 }
+    members: [{ _id: 0, host: 'configsvr1:27019' }]
   });
   print('Config RS iniciado');
 } catch(e) {

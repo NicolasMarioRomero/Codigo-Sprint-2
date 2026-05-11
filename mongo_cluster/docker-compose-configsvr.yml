@@ -38,37 +38,13 @@ services:
       - configsvr1_data:/data/db
     restart: unless-stopped
 
-  # ── Config Server nodo 2 ──────────────────────────────────────
-  configsvr2:
-    image: mongo:7.0
-    container_name: configsvr2
-    command: mongod --configsvr --replSet rs_config --port 27020 --bind_ip_all
-    ports:
-      - "27020:27020"
-    networks: [mongo_net]
-    volumes:
-      - configsvr2_data:/data/db
-    restart: unless-stopped
-
-  # ── Config Server nodo 3 ──────────────────────────────────────
-  configsvr3:
-    image: mongo:7.0
-    container_name: configsvr3
-    command: mongod --configsvr --replSet rs_config --port 27021 --bind_ip_all
-    ports:
-      - "27021:27021"
-    networks: [mongo_net]
-    volumes:
-      - configsvr3_data:/data/db
-    restart: unless-stopped
-
   # ── mongos — query router (puerto 27017 → app Django) ─────────
   mongos:
     image: mongo:7.0
     container_name: mongos
     command: >
       mongos
-      --configdb rs_config/configsvr1:27019,configsvr2:27020,configsvr3:27021
+      --configdb rs_config/configsvr1:27019
       --port 27017
       --bind_ip_all
     ports:
@@ -76,11 +52,7 @@ services:
     networks: [mongo_net]
     depends_on:
       - configsvr1
-      - configsvr2
-      - configsvr3
     restart: unless-stopped
 
 volumes:
   configsvr1_data:
-  configsvr2_data:
-  configsvr3_data:
