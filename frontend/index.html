@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BITE FinOps — Cloud Cost Dashboard</title>
+  <title>BITE FinOps — Cloud Intelligence</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -13,7 +13,6 @@
 <header>
   <div class="logo">BITE <span>FinOps</span></div>
   <span class="header-tag">Cloud Intelligence</span>
-
   <div class="header-right">
     <div class="latency-badge" id="latencyBadge">
       <span class="spinner" style="display:none" id="latencySpinner"></span>
@@ -30,7 +29,7 @@
   <!-- ── Sidebar ── -->
   <nav class="sidebar">
     <div class="sidebar-section">
-      <div class="sidebar-label">Navegación</div>
+      <div class="sidebar-label">Sprint 2</div>
       <div class="nav-item active" onclick="showPage('dashboard', this)">
         <span class="icon">📊</span> Dashboard
       </div>
@@ -41,7 +40,23 @@
         <span class="icon">📋</span> Reportes
       </div>
       <div class="nav-item" onclick="showPage('asr', this)">
-        <span class="icon">🔬</span> ASR / Métricas
+        <span class="icon">🔬</span> ASR Métricas
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sprint 3</div>
+      <div class="nav-item" onclick="showPage('places', this)">
+        <span class="icon">🗺️</span> Places
+      </div>
+      <div class="nav-item" onclick="showPage('credentials', this)">
+        <span class="icon">🔐</span> Credenciales
+      </div>
+      <div class="nav-item" onclick="showPage('logmasking', this)">
+        <span class="icon">🛡️</span> Log Masking
+      </div>
+      <div class="nav-item" onclick="showPage('disponibilidad', this)">
+        <span class="icon">🏗️</span> Disponibilidad
       </div>
     </div>
 
@@ -58,23 +73,17 @@
 
     <!-- ══════ PAGE: Dashboard ══════ -->
     <div class="page active" id="page-dashboard">
-
       <div class="page-header">
         <div>
           <div class="page-title">Dashboard de Costos</div>
           <div class="page-sub" id="dashSub">Selecciona una empresa para cargar datos</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-secondary" onclick="loadDashboard()" id="btnRefresh">
-            🔄 Actualizar
-          </button>
-          <button class="btn btn-primary" onclick="loadDashboard(true)">
-            Cargar Dashboard
-          </button>
+          <button class="btn btn-secondary" onclick="loadDashboard()" id="btnRefresh">🔄 Actualizar</button>
+          <button class="btn btn-primary" onclick="loadDashboard(true)">Cargar Dashboard</button>
         </div>
       </div>
 
-      <!-- KPIs -->
       <div class="kpi-grid" id="kpiGrid">
         <div class="kpi-card skeleton skeleton-card"></div>
         <div class="kpi-card skeleton skeleton-card"></div>
@@ -82,23 +91,17 @@
         <div class="kpi-card skeleton skeleton-card"></div>
       </div>
 
-      <!-- Charts -->
       <div class="charts-row">
         <div class="card">
           <div class="card-title">Distribución por Proveedor <span class="chip chip-blue">Pie</span></div>
-          <div class="chart-wrap">
-            <canvas id="providerChart"></canvas>
-          </div>
+          <div class="chart-wrap"><canvas id="providerChart"></canvas></div>
         </div>
         <div class="card">
           <div class="card-title">Gasto por Servicio <span class="chip chip-purple">Top 8</span></div>
-          <div class="chart-wrap">
-            <canvas id="serviceChart"></canvas>
-          </div>
+          <div class="chart-wrap"><canvas id="serviceChart"></canvas></div>
         </div>
       </div>
 
-      <!-- Bar breakdowns -->
       <div class="charts-row">
         <div class="card">
           <div class="card-title">Por Servicio <span class="chip chip-purple" id="svcCount"></span></div>
@@ -117,15 +120,12 @@
 
     <!-- ══════ PAGE: Extractor ══════ -->
     <div class="page" id="page-extractor">
-
       <div class="page-header">
         <div>
           <div class="page-title">Extractor de Métricas Cloud</div>
           <div class="page-sub">Agente agnóstico de proveedor · ASR Escalabilidad</div>
         </div>
-        <span class="chip chip-green" style="font-size:12px;padding:4px 10px">
-          ✓ Reintentos automáticos · Backoff exponencial
-        </span>
+        <span class="chip chip-green" style="font-size:12px;padding:4px 10px">✓ Reintentos automáticos · Backoff exponencial</span>
       </div>
 
       <div class="card" style="margin-bottom:20px">
@@ -147,12 +147,8 @@
             <select id="projectSelect"></select>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary" onclick="runExtractorSync()" id="btnExtSync">
-              ⚡ Extracción Síncrona
-            </button>
-            <button class="btn btn-secondary" onclick="runExtractorAsync()" id="btnExtAsync">
-              📬 Encolar (Async)
-            </button>
+            <button class="btn btn-primary" onclick="runExtractorSync()" id="btnExtSync">⚡ Extracción Síncrona</button>
+            <button class="btn btn-secondary" onclick="runExtractorAsync()" id="btnExtAsync">📬 Encolar (Async)</button>
           </div>
         </div>
       </div>
@@ -167,7 +163,6 @@
         </div>
       </div>
 
-      <!-- Metrics tiles -->
       <div id="metricsSection" style="display:none">
         <div class="card">
           <div class="card-title">Métricas Extraídas <span class="chip chip-green" id="metricsCount"></span></div>
@@ -178,7 +173,6 @@
 
     <!-- ══════ PAGE: Reports ══════ -->
     <div class="page" id="page-reports">
-
       <div class="page-header">
         <div>
           <div class="page-title">Reportes Detallados</div>
@@ -192,22 +186,13 @@
           <table>
             <thead>
               <tr>
-                <th>#</th>
-                <th>Proveedor</th>
-                <th>Servicio</th>
-                <th>Proyecto</th>
-                <th>Región</th>
-                <th>Costo</th>
-                <th>Uso</th>
-                <th>Fecha</th>
+                <th>#</th><th>Proveedor</th><th>Servicio</th><th>Proyecto</th>
+                <th>Región</th><th>Costo</th><th>Uso</th><th>Fecha</th>
               </tr>
             </thead>
             <tbody id="reportTableBody">
               <tr><td colspan="8">
-                <div class="empty-state">
-                  <div class="icon">📋</div>
-                  <p>Selecciona una empresa y presiona "Cargar Reportes"</p>
-                </div>
+                <div class="empty-state"><div class="icon">📋</div><p>Selecciona una empresa y presiona "Cargar Reportes"</p></div>
               </td></tr>
             </tbody>
           </table>
@@ -219,9 +204,8 @@
       </div>
     </div>
 
-    <!-- ══════ PAGE: ASR ══════ -->
+    <!-- ══════ PAGE: ASR Métricas ══════ -->
     <div class="page" id="page-asr">
-
       <div class="page-header">
         <div>
           <div class="page-title">ASR — Métricas de Calidad</div>
@@ -229,21 +213,16 @@
         </div>
       </div>
 
-      <!-- ASR Cards -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px" id="asrCards">
-        <!-- Latencia -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
         <div class="card">
           <span class="asr-badge asr-latency">⏱ ASR Latencia</span>
           <div class="asr-title">Dashboard en &lt; 3 segundos</div>
           <div class="asr-desc">Con ~5,000 usuarios concurrentes, el dashboard de reportes debe responder en máximo 3s mediante caché Redis y agregación SQL.</div>
           <div class="asr-metric">
-            <div class="asr-meter">
-              <div class="asr-fill" id="latFill" style="width:0%;background:var(--green)"></div>
-            </div>
+            <div class="asr-meter"><div class="asr-fill" id="latFill" style="width:0%;background:var(--green)"></div></div>
             <div class="asr-val" id="latVal" style="color:var(--text-muted)">—</div>
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:6px" id="latStatus">Carga el dashboard para medir la latencia</div>
-
           <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
             <div class="card-title" style="margin-bottom:8px">Tácticas aplicadas</div>
             <div style="font-size:12px;color:var(--text-soft);line-height:1.8">
@@ -255,57 +234,406 @@
           </div>
         </div>
 
-        <!-- Escalabilidad -->
         <div class="card">
           <span class="asr-badge asr-scale">⚡ ASR Escalabilidad</span>
           <div class="asr-title">100% de éxito en extracciones</div>
           <div class="asr-desc">El extractor debe capturar métricas de forma agnóstica en ambientes sobrecargados, garantizando 100% de éxito mediante reintentos.</div>
           <div class="asr-metric">
-            <div class="asr-meter">
-              <div class="asr-fill" id="scaleFill" style="width:0%;background:var(--green)"></div>
-            </div>
+            <div class="asr-meter"><div class="asr-fill" id="scaleFill" style="width:0%;background:var(--green)"></div></div>
             <div class="asr-val" id="scaleVal" style="color:var(--text-muted)">—</div>
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:6px" id="scaleStatus">Ejecuta una extracción para ver métricas</div>
-
           <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
             <div class="card-title" style="margin-bottom:8px">Tácticas aplicadas</div>
             <div style="font-size:12px;color:var(--text-soft);line-height:1.8">
               ✦ <strong>Reintentos (MAX 5)</strong> — Backoff exponencial 2^n segundos<br>
               ✦ <strong>Jitter aleatorio</strong> — Evita thundering herd en reintentos<br>
               ✦ <strong>Patrón Strategy</strong> — Provider agnóstico (AWS / GCP)<br>
-              ✦ <strong>Celery async</strong> — Cola de tareas para extracciones pesadas<br>
-              ✦ <strong>Validación</strong> — Solo métricas válidas pasan al resultado
+              ✦ <strong>Celery async</strong> — Cola de tareas para extracciones pesadas
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Historial de mediciones -->
       <div class="card">
         <div class="card-title">Historial de Mediciones <span class="chip chip-purple" id="histCount">0</span></div>
         <div class="table-wrap">
           <table>
             <thead>
-              <tr>
-                <th>Hora</th>
-                <th>ASR</th>
-                <th>Empresa</th>
-                <th>Fuente</th>
-                <th>Resultado</th>
-                <th>Estado</th>
-              </tr>
+              <tr><th>Hora</th><th>ASR</th><th>Empresa</th><th>Fuente</th><th>Resultado</th><th>Estado</th></tr>
             </thead>
             <tbody id="asrHistory">
               <tr><td colspan="6">
-                <div class="empty-state">
-                  <div class="icon">🔬</div>
-                  <p>Las mediciones aparecerán aquí al usar el dashboard y el extractor</p>
-                </div>
+                <div class="empty-state"><div class="icon">🔬</div><p>Las mediciones aparecerán aquí al usar el dashboard y el extractor</p></div>
               </td></tr>
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: Places (Sprint 3 — Disponibilidad MongoDB) ══════ -->
+    <div class="page" id="page-places">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Places — MongoDB Sharded</div>
+          <div class="page-sub">Colección distribuida en clúster sharded · Sprint 3 Disponibilidad</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="checkPlacesHealth()">🩺 Health Check</button>
+          <button class="btn btn-primary" onclick="loadPlaces()">🔄 Cargar Places</button>
+        </div>
+      </div>
+
+      <!-- Status band -->
+      <div class="status-band" id="placesStatusBand">
+        <div class="status-dot" id="placesStatusDot"></div>
+        <span id="placesStatusText">Sin verificar — presiona Health Check</span>
+        <span class="status-detail" id="placesStatusDetail"></span>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:20px" id="placesKpi">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Places</div>
+          <div class="kpi-value" id="pkTotal">—</div>
+          <div class="kpi-sub">documentos en MongoDB</div>
+          <div class="kpi-icon">🗺️</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Estado Clúster</div>
+          <div class="kpi-value" id="pkCluster" style="font-size:18px">—</div>
+          <div class="kpi-sub">MongoDB Sharded</div>
+          <div class="kpi-icon">🏗️</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-label">Tiempo Respuesta</div>
+          <div class="kpi-value" id="pkLatency">—</div>
+          <div class="kpi-sub">GET /places/</div>
+          <div class="kpi-icon">⏱️</div>
+        </div>
+      </div>
+
+      <!-- Places grid -->
+      <div class="card">
+        <div class="card-title">
+          Registros en la Colección
+          <span class="chip chip-blue" id="placesCount">0</span>
+        </div>
+        <div id="placesGrid">
+          <div class="empty-state"><div class="icon">🗺️</div><p>Presiona "Cargar Places" para ver los documentos del clúster MongoDB</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: Credentials — ASR29 Seguridad ══════ -->
+    <div class="page" id="page-credentials">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Vault de Credenciales</div>
+          <div class="page-sub">ASR29 Seguridad — Detección de anomalías vía RabbitMQ pub/sub</div>
+        </div>
+        <button class="btn btn-secondary" onclick="loadAuditLog()">📜 Ver Audit Log</button>
+      </div>
+
+      <!-- ASR29 Card -->
+      <div class="card asr29-card" style="margin-bottom:20px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <span class="asr-badge asr-security">🔐 ASR29 Seguridad</span>
+            <div class="asr-title" style="margin-top:8px">Detección de anomalías en uso de credenciales</div>
+            <div class="asr-desc" style="max-width:600px">Cuando una credencial se usa desde un país inusual, fuera de horario o con volumen anómalo, el sistema publica un evento en RabbitMQ y el consumer emite una alerta. El ASR exige que el 100% de los accesos anómalos sean detectados.</div>
+          </div>
+          <div class="asr29-stats" id="asr29Stats">
+            <div class="stat-item"><div class="stat-val" id="s29Total">0</div><div class="stat-lbl">Usos totales</div></div>
+            <div class="stat-item"><div class="stat-val" id="s29Anomalias" style="color:var(--red)">0</div><div class="stat-lbl">Anomalías</div></div>
+            <div class="stat-item"><div class="stat-val" id="s29Tasa" style="color:var(--green)">—</div><div class="stat-lbl">Tasa detección</div></div>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="tactic-chip">📡 RabbitMQ pub/sub</span>
+          <span class="tactic-chip">🌍 Regla GEO</span>
+          <span class="tactic-chip">🕐 Regla TIME</span>
+          <span class="tactic-chip">📈 Regla VOLUMEN</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+        <!-- Registrar credencial -->
+        <div class="card">
+          <div class="card-title">➕ Registrar Credencial</div>
+          <div class="cred-form">
+            <div class="form-group">
+              <label>ID Credencial</label>
+              <input type="text" id="regCredId" class="inp" placeholder="cred-exp-1" />
+            </div>
+            <div class="form-group">
+              <label>Client ID</label>
+              <input type="text" id="regClientId" class="inp" placeholder="client-test-001" value="client-test-001" />
+            </div>
+            <div class="form-group">
+              <label>Países típicos (coma separados)</label>
+              <input type="text" id="regCountries" class="inp" placeholder="CO,US,MX" value="CO,US,MX" />
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="form-group">
+                <label>Hora inicio típica</label>
+                <input type="number" id="regHourStart" class="inp" min="0" max="23" value="8" />
+              </div>
+              <div class="form-group">
+                <label>Hora fin típica</label>
+                <input type="number" id="regHourEnd" class="inp" min="0" max="23" value="20" />
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="form-group">
+                <label>Req/min promedio</label>
+                <input type="number" id="regAvgReq" class="inp" value="5" />
+              </div>
+              <div class="form-group">
+                <label>Stddev req/min</label>
+                <input type="number" id="regStddev" class="inp" value="2" />
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="registerCredential()">Registrar</button>
+          </div>
+        </div>
+
+        <!-- Usar credencial (simular acceso) -->
+        <div class="card">
+          <div class="card-title">▶ Simular Uso de Credencial</div>
+          <div class="cred-form">
+            <div class="form-group">
+              <label>ID Credencial</label>
+              <input type="text" id="useCredId" class="inp" placeholder="cred-exp-1" />
+            </div>
+            <div class="form-group">
+              <label>Client ID</label>
+              <input type="text" id="useClientId" class="inp" value="client-test-001" />
+            </div>
+            <div class="form-group">
+              <label>País de acceso</label>
+              <select id="useCountry" class="inp">
+                <option value="CO">🇨🇴 CO — Normal</option>
+                <option value="US">🇺🇸 US — Normal</option>
+                <option value="MX">🇲🇽 MX — Normal</option>
+                <option value="RU">🇷🇺 RU — ⚠ Anómalo</option>
+                <option value="CN">🇨🇳 CN — ⚠ Anómalo</option>
+                <option value="KP">🇰🇵 KP — ⚠ Anómalo</option>
+              </select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button class="btn btn-success" onclick="useCredential(false)" style="width:100%">✓ Acceso Normal</button>
+              <button class="btn btn-danger" onclick="useCredential(true)" style="width:100%">⚠ Simular Anomalía</button>
+            </div>
+            <div class="cred-result" id="credResult" style="display:none"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Audit Log -->
+      <div class="card">
+        <div class="card-title">
+          📜 Audit Log — Eventos de Seguridad
+          <span class="chip chip-purple" id="auditCount">0</span>
+          <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;margin-left:auto" onclick="loadAuditLog()">↻ Refrescar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Timestamp</th><th>Credencial</th><th>Cliente</th><th>País</th><th>Hora</th><th>Tipo</th><th>Detalle</th></tr>
+            </thead>
+            <tbody id="auditLogBody">
+              <tr><td colspan="7">
+                <div class="empty-state"><div class="icon">📜</div><p>Presiona "Ver Audit Log" o usa una credencial para ver eventos</p></div>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: Log Masking — ASR30 ══════ -->
+    <div class="page" id="page-logmasking">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Log Masking — Datos Sensibles</div>
+          <div class="page-sub">ASR30 Seguridad — SensitiveDataFilter enmascara credenciales en logs de Django</div>
+        </div>
+      </div>
+
+      <!-- ASR30 Card -->
+      <div class="card asr30-card" style="margin-bottom:20px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <span class="asr-badge asr-security30">🛡️ ASR30 Seguridad</span>
+            <div class="asr-title" style="margin-top:8px">100% de datos sensibles enmascarados en logs</div>
+            <div class="asr-desc" style="max-width:600px">El <code>SensitiveDataFilter</code> de Django intercepta todos los registros de log y reemplaza automáticamente AWS keys, JWTs, Account IDs y URIs de DB con <code>[MASKED]</code> antes de persistirlos. Cero datos sensibles en texto plano en los logs del sistema.</div>
+          </div>
+          <div class="asr29-stats" id="asr30Stats">
+            <div class="stat-item"><div class="stat-val" id="s30Tests">0</div><div class="stat-lbl">Pruebas</div></div>
+            <div class="stat-item"><div class="stat-val" id="s30Masked" style="color:var(--green)">0</div><div class="stat-lbl">Enmascarados</div></div>
+            <div class="stat-item"><div class="stat-val" id="s30Pct" style="color:var(--green)">—</div><div class="stat-lbl">Efectividad</div></div>
+          </div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="tactic-chip">🔑 AWS Keys</span>
+          <span class="tactic-chip">🪙 JWT Tokens</span>
+          <span class="tactic-chip">🔢 Account IDs</span>
+          <span class="tactic-chip">🗄 DB URIs</span>
+        </div>
+      </div>
+
+      <!-- Test buttons -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px">
+
+        <div class="leak-card" id="lcAwsKey">
+          <div class="leak-type">🔑 AWS Secret Key</div>
+          <div class="leak-sample"><code>AKIAIOSFODNN7EXAMPLE...</code></div>
+          <div class="leak-desc">Simula un log con una clave secreta de AWS real. El filtro debe reemplazarla con <code>[MASKED]</code>.</div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="testLeak('aws-key', this)">Probar Enmascaramiento</button>
+          <div class="leak-result" id="lr-aws-key" style="display:none"></div>
+        </div>
+
+        <div class="leak-card" id="lcJwt">
+          <div class="leak-type">🪙 JWT Token</div>
+          <div class="leak-sample"><code>eyJhbGciOiJIUzI1NiJ9...</code></div>
+          <div class="leak-desc">Simula un log con un token JWT completo. El filtro detecta el patrón <code>eyJ</code> característico.</div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="testLeak('jwt', this)">Probar Enmascaramiento</button>
+          <div class="leak-result" id="lr-jwt" style="display:none"></div>
+        </div>
+
+        <div class="leak-card" id="lcAccount">
+          <div class="leak-type">🔢 AWS Account ID</div>
+          <div class="leak-sample"><code>123456789012</code></div>
+          <div class="leak-desc">Simula un log con un Account ID de AWS (12 dígitos). El filtro detecta números de 12 cifras consecutivos.</div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="testLeak('account', this)">Probar Enmascaramiento</button>
+          <div class="leak-result" id="lr-account" style="display:none"></div>
+        </div>
+
+        <div class="leak-card" id="lcDbUri">
+          <div class="leak-type">🗄 Database URI</div>
+          <div class="leak-sample"><code>postgresql://user:pass@host/db</code></div>
+          <div class="leak-desc">Simula un log con una URI de base de datos. El filtro enmascara credenciales en esquemas <code>postgresql://</code>, <code>mysql://</code>, etc.</div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="testLeak('db-uri', this)">Probar Enmascaramiento</button>
+          <div class="leak-result" id="lr-db-uri" style="display:none"></div>
+        </div>
+
+      </div>
+
+      <!-- Results log -->
+      <div class="card">
+        <div class="card-title">
+          Registro de Pruebas
+          <span class="chip chip-green" id="maskCount">0</span>
+          <button class="btn btn-secondary" style="font-size:11px;padding:3px 10px;margin-left:auto" onclick="clearMaskLog()">Limpiar</button>
+        </div>
+        <div class="task-timeline" id="maskLog" style="max-height:300px">
+          <div class="log-line"><span class="log-ts">--:--:--</span><span class="log-info">Listo. Presiona cualquier botón de prueba para verificar el enmascaramiento.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ PAGE: Disponibilidad — MongoDB Failover ══════ -->
+    <div class="page" id="page-disponibilidad">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Disponibilidad — Failover MongoDB</div>
+          <div class="page-sub">Experimento de failover en clúster sharded · Criterio: delta_t &lt; 5 segundos</div>
+        </div>
+        <button class="btn btn-secondary" onclick="checkDisponibilidad()">🩺 Verificar Estado</button>
+      </div>
+
+      <!-- Criterio ASR -->
+      <div class="card asr-dispon-card" style="margin-bottom:20px">
+        <span class="asr-badge asr-dispon">🏗️ ASR Disponibilidad</span>
+        <div class="asr-title" style="margin-top:8px">Failover de shard MongoDB en menos de 5 segundos</div>
+        <div class="asr-desc">Bajo carga sostenida de 200 req/s sobre <code>GET /places/</code>, el tiempo de failover al detener el nodo primario de un shard debe ser inferior a 5,000 ms en al menos 4 de 5 corridas. El throughput debe recuperarse al 100% en menos de 30 segundos post-fallo.</div>
+        <div class="asr-metric" style="margin-top:12px">
+          <div class="asr-meter"><div class="asr-fill" id="disponFill" style="width:0%;background:var(--green)"></div></div>
+          <div class="asr-val" id="disponVal" style="color:var(--text-muted)">—</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px" id="disponStatus">Verifica el estado del clúster para comenzar</div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="tactic-chip">🔁 Replica Set por shard</span>
+          <span class="tactic-chip">🗳 Elección automática de primario</span>
+          <span class="tactic-chip">📡 mongos router</span>
+          <span class="tactic-chip">⚡ Reconexión automática</span>
+        </div>
+      </div>
+
+      <!-- Cluster status grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px" id="clusterGrid">
+        <div class="shard-card" id="sc-mongos">
+          <div class="shard-name">mongos</div>
+          <div class="shard-role">Router</div>
+          <div class="shard-status" id="ss-mongos">—</div>
+        </div>
+        <div class="shard-card" id="sc-shard1">
+          <div class="shard-name">Shard 1</div>
+          <div class="shard-role">shard1a/b/c (replica set)</div>
+          <div class="shard-status" id="ss-shard1">—</div>
+        </div>
+        <div class="shard-card" id="sc-shard2">
+          <div class="shard-name">Shard 2</div>
+          <div class="shard-role">shard2a/b/c (replica set)</div>
+          <div class="shard-status" id="ss-shard2">—</div>
+        </div>
+        <div class="shard-card" id="sc-shard3">
+          <div class="shard-name">Shard 3</div>
+          <div class="shard-role">shard3a/b/c (replica set)</div>
+          <div class="shard-status" id="ss-shard3">—</div>
+        </div>
+      </div>
+
+      <!-- Failover experiment instructions -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+        <div class="card">
+          <div class="card-title">🧪 Experimento de Failover</div>
+          <div style="font-size:13px;color:var(--text-soft);line-height:1.9">
+            <div class="step-row"><span class="step-num">1</span><span>Inicia JMeter con <code>jmeter_disponibilidad.jmx</code> (200 req/s por 12 min)</span></div>
+            <div class="step-row"><span class="step-num">2</span><span>Espera 2 minutos de calentamiento</span></div>
+            <div class="step-row"><span class="step-num">3</span><span>En el minuto 5, detén el primario de shard1:<br><code style="font-size:11px">ssh ubuntu@IP "docker stop shard1a"</code></span></div>
+            <div class="step-row"><span class="step-num">4</span><span>Observa el pico de errores en JMeter y el tiempo de recuperación</span></div>
+            <div class="step-row"><span class="step-num">5</span><span>Reinicia el shard y repite 5 veces:<br><code style="font-size:11px">docker start shard1a && sleep 30</code></span></div>
+          </div>
+          <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border2)">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Criterio de aceptación</div>
+            <div style="font-size:12px;color:var(--text-soft);line-height:1.7">
+              ✓ delta_t failover &lt; 5,000 ms en 4/5 corridas<br>
+              ✓ % error proporcional a delta_t × 200 req/s<br>
+              ✓ Throughput vuelve al 100% en &lt; 30 segundos
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📊 Resultados del Experimento</div>
+          <div id="failoverResults">
+            <div class="empty-state" style="padding:32px 16px">
+              <div class="icon">📊</div>
+              <p>Registra los resultados de cada corrida del experimento de failover</p>
+            </div>
+          </div>
+          <div style="margin-top:12px">
+            <div class="card-title" style="margin-bottom:10px">Registrar Corrida</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+              <div class="form-group">
+                <label>Delta T (ms)</label>
+                <input type="number" id="failDeltaT" class="inp" placeholder="ej. 3200" />
+              </div>
+              <div class="form-group">
+                <label>Recovery (s)</label>
+                <input type="number" id="failRecovery" class="inp" placeholder="ej. 18" />
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%" onclick="addFailoverRun()">➕ Añadir Corrida</button>
+          </div>
+        </div>
+
       </div>
     </div>
 

@@ -324,6 +324,10 @@ log "Servicios systemd configurados"
 # ══════════════════════════════════════════════════════════════
 info "Configurando nginx..."
 ssh $SSH_OPTS ubuntu@$APP_IP "sudo bash -s" << 'ENDSSH'
+    # Permitir que www-data (nginx) pueda leer /home/ubuntu/app/frontend/
+    chmod o+x /home/ubuntu
+    chmod o+x /home/ubuntu/app
+    chmod -R o+r /home/ubuntu/app/frontend
     cp /home/ubuntu/app/nginx/nginx.conf /etc/nginx/nginx.conf
     nginx -t && systemctl restart nginx
     echo "→ nginx OK"
