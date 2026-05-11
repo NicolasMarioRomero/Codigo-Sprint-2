@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
-    <TestPlan guiclass="TestPlanGui" testclass="TestPlan"
-              testname="BITE - ASR29 Seguridad: Deteccion y Revocacion de Credenciales"
-              enabled="true">
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="BITE - ASR29 Seguridad: Deteccion y Revocacion de Credenciales">
       <stringProp name="TestPlan.comments">
         Experimento ASR29: 100 credenciales comprometidas con patron anomalo (pais fuera de whitelist).
         Criterio: &gt;= 95 de 100 credenciales bloqueadas en &lt; 600 segundos.
 
         PREREQUISITO antes de correr:
-          ssh ubuntu@APP_IP "cd /home/ubuntu/app &amp;&amp; source .env &amp;&amp;
-            /home/ubuntu/venv/bin/python scripts/seed_history.py"
+          ssh ubuntu@APP_IP &quot;cd /home/ubuntu/app &amp;&amp; source .env &amp;&amp;
+            /home/ubuntu/venv/bin/python scripts/seed_history.py&quot;
 
         FASES (secuenciales):
           0 - Setup:     Registra 100 credenciales cred-exp-001 ... cred-exp-100
@@ -18,14 +16,12 @@
           2 - Anomalo:   100 usos con geo_country=RU - dispara regla GEO del detector
           3 - Monitor:   Pollea /credentials/audit/ cada 30s por 10 min
       </stringProp>
-      <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
-      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments"
-                   guiclass="ArgumentsPanel" testclass="Arguments" testname="Variables globales" enabled="true">
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="Variables globales">
         <collectionProp name="Arguments.arguments">
           <elementProp name="HOST" elementType="Argument">
             <stringProp name="Argument.name">HOST</stringProp>
-            <stringProp name="Argument.value">localhost</stringProp>
+            <stringProp name="Argument.value">98.84.159.214</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="PORT" elementType="Argument">
@@ -41,54 +37,40 @@
         </collectionProp>
       </elementProp>
     </TestPlan>
-
     <hashTree>
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- FASE 0 — Setup: Registrar 100 credenciales de prueba              -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup"
-                        testname="[Fase 0] Setup - Registrar 100 Credenciales" enabled="true">
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="[Fase 0] Setup - Registrar 100 Credenciales">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
-                     guiclass="LoopControlPanel" testclass="LoopController" enabled="true">
-          <intProp name="LoopController.loops">100</intProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+          <stringProp name="LoopController.loops">100</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </SetupThreadGroup>
       <hashTree>
-
-        <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig"
-                       testname="Contador cred-exp-001..100" enabled="true">
+        <CounterConfig guiclass="CounterConfigGui" testclass="CounterConfig" testname="Contador cred-exp-001..100" enabled="true">
           <stringProp name="CounterConfig.start">1</stringProp>
           <stringProp name="CounterConfig.end">100</stringProp>
           <stringProp name="CounterConfig.incr">1</stringProp>
           <stringProp name="CounterConfig.name">credIdx</stringProp>
           <stringProp name="CounterConfig.format">000</stringProp>
           <boolProp name="CounterConfig.per_user">false</boolProp>
-          <boolProp name="CounterConfig.reset_on_tg_iteration">false</boolProp>
         </CounterConfig>
         <hashTree/>
-
-        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement"
-                           testname="HTTP Defaults Setup" enabled="true">
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Defaults Setup" enabled="true">
+          <intProp name="HTTPSampler.connect_timeout">5000</intProp>
+          <intProp name="HTTPSampler.response_timeout">10000</intProp>
           <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
           <stringProp name="HTTPSampler.port">${PORT}</stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
-          <intProp name="HTTPSampler.connect_timeout">5000</intProp>
-          <intProp name="HTTPSampler.response_timeout">10000</intProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
-                       guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
+          <stringProp name="HTTPSampler.implementation"></stringProp>
         </ConfigTestElement>
         <hashTree/>
-
-        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager"
-                       testname="Content-Type JSON" enabled="true">
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type JSON" enabled="true">
           <collectionProp name="HeaderManager.headers">
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">Content-Type</stringProp>
@@ -97,47 +79,37 @@
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
-                          testname="POST /credentials/register/ - cred-exp-${credIdx}" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /credentials/register/ - cred-exp-${credIdx}" enabled="true">
           <stringProp name="HTTPSampler.path">/credentials/register/</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
-                       guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{"credential_id":"cred-exp-${credIdx}","client_id":"client-test-001","ambiente":"dev","provider":"aws","raw_key":"AKIATEST${credIdx}XYZXYZXYZ01"}</stringProp>
+                <stringProp name="Argument.value">{&quot;credential_id&quot;:&quot;cred-exp-${credIdx}&quot;,&quot;client_id&quot;:&quot;client-test-001&quot;,&quot;ambiente&quot;:&quot;dev&quot;,&quot;provider&quot;:&quot;aws&quot;,&quot;raw_key&quot;:&quot;AKIATEST${credIdx}XYZXYZXYZ01&quot;}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
-                             testname="Verificar 201 o 400 (ya existe)" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Verificar 201 o 400 (ya existe)" enabled="true">
             <collectionProp name="Asserion.test_strings">
-              <stringProp name="49586">201</stringProp>
-              <stringProp name="49587">400</stringProp>
+              <stringProp name="49587">201</stringProp>
+              <stringProp name="51508">400</stringProp>
             </collectionProp>
             <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
             <intProp name="Assertion.test_type">33</intProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-
       </hashTree>
-      <!-- /Fase 0 -->
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- FASE 1 — Trafico Legitimo (5 min) - Validar sin falsos positivos  -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup"
-                   testname="[Fase 1] Trafico Legitimo - 5 min (geo CO)" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Fase 1] Trafico Legitimo - 5 min (geo CO)" enabled="true">
         <intProp name="ThreadGroup.num_threads">5</intProp>
         <intProp name="ThreadGroup.ramp_time">10</intProp>
         <longProp name="ThreadGroup.duration">300</longProp>
@@ -145,30 +117,25 @@
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
-                     guiclass="LoopControlPanel" testclass="LoopController" enabled="true">
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
           <intProp name="LoopController.loops">-1</intProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-
-        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement"
-                           testname="HTTP Defaults Fase 1" enabled="true">
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Defaults Fase 1" enabled="true">
+          <intProp name="HTTPSampler.connect_timeout">5000</intProp>
+          <intProp name="HTTPSampler.response_timeout">10000</intProp>
           <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
           <stringProp name="HTTPSampler.port">${PORT}</stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
-          <intProp name="HTTPSampler.connect_timeout">5000</intProp>
-          <intProp name="HTTPSampler.response_timeout">10000</intProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
-                       guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
+          <stringProp name="HTTPSampler.implementation"></stringProp>
         </ConfigTestElement>
         <hashTree/>
-
-        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager"
-                       testname="Content-Type JSON" enabled="true">
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type JSON" enabled="true">
           <collectionProp name="HeaderManager.headers">
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">Content-Type</stringProp>
@@ -177,83 +144,65 @@
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-
-        <GaussianRandomTimer guiclass="GaussianRandomTimerGui" testclass="GaussianRandomTimer"
-                             testname="Pausa entre requests 1000ms+-300ms" enabled="true">
+        <GaussianRandomTimer guiclass="GaussianRandomTimerGui" testclass="GaussianRandomTimer" testname="Pausa entre requests 1000ms+-300ms" enabled="true">
           <stringProp name="ConstantTimer.delay">1000</stringProp>
           <stringProp name="RandomTimer.range">300.0</stringProp>
         </GaussianRandomTimer>
         <hashTree/>
-
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
-                          testname="POST /credentials/use/ - geo CO (legitimo)" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /credentials/use/ - geo CO (legitimo)" enabled="true">
           <stringProp name="HTTPSampler.path">/credentials/use/</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
-                       guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{"credential_id":"cred-exp-${__Random(1,100,)}","geo_country":"CO","endpoint":"/aws/s3/list"}</stringProp>
+                <stringProp name="Argument.value">{&quot;credential_id&quot;:&quot;cred-exp-${__Random(1,100,)}&quot;,&quot;geo_country&quot;:&quot;CO&quot;,&quot;endpoint&quot;:&quot;/aws/s3/list&quot;}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
-                             testname="Verificar 200 o 404 (acepta ambos)" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Verificar 200 o 404 (acepta ambos)" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="49586">200</stringProp>
-              <stringProp name="49587">404</stringProp>
+              <stringProp name="51512">404</stringProp>
             </collectionProp>
             <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
             <intProp name="Assertion.test_type">33</intProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-
       </hashTree>
-      <!-- /Fase 1 -->
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- FASE 2 — Inyeccion Anomala: 100 usos con geo RU                  -->
-      <!--          Cada thread usa su propio credencial (threadNum)         -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup"
-                   testname="[Fase 2] Inyeccion Anomala - 100 creds geo RU" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Fase 2] Inyeccion Anomala - 100 creds geo RU" enabled="true">
         <intProp name="ThreadGroup.num_threads">100</intProp>
         <intProp name="ThreadGroup.ramp_time">5</intProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
-                     guiclass="LoopControlPanel" testclass="LoopController" enabled="true">
-          <intProp name="LoopController.loops">1</intProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+          <stringProp name="LoopController.loops">1</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-
-        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement"
-                           testname="HTTP Defaults Fase 2" enabled="true">
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Defaults Fase 2" enabled="true">
+          <intProp name="HTTPSampler.connect_timeout">5000</intProp>
+          <intProp name="HTTPSampler.response_timeout">10000</intProp>
           <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
           <stringProp name="HTTPSampler.port">${PORT}</stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
-          <intProp name="HTTPSampler.connect_timeout">5000</intProp>
-          <intProp name="HTTPSampler.response_timeout">10000</intProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
-                       guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
+          <stringProp name="HTTPSampler.implementation"></stringProp>
         </ConfigTestElement>
         <hashTree/>
-
-        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager"
-                       testname="Content-Type JSON" enabled="true">
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Content-Type JSON" enabled="true">
           <collectionProp name="HeaderManager.headers">
             <elementProp name="" elementType="Header">
               <stringProp name="Header.name">Content-Type</stringProp>
@@ -262,28 +211,24 @@
           </collectionProp>
         </HeaderManager>
         <hashTree/>
-
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
-                          testname="POST /credentials/use/ - geo RU (ANOMALO)" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="POST /credentials/use/ - geo RU (ANOMALO)" enabled="true">
           <stringProp name="HTTPSampler.path">/credentials/use/</stringProp>
-          <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
-                       guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{"credential_id":"cred-exp-${__threadNum}","geo_country":"RU","endpoint":"/admin/export_all"}</stringProp>
+                <stringProp name="Argument.value">{&quot;credential_id&quot;:&quot;cred-exp-${__threadNum}&quot;,&quot;geo_country&quot;:&quot;RU&quot;,&quot;endpoint&quot;:&quot;/admin/export_all&quot;}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
-                             testname="Verificar 200 (uso registrado y publicado en RabbitMQ)" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Verificar 200 (uso registrado y publicado en RabbitMQ)" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="49586">200</stringProp>
             </collectionProp>
@@ -294,73 +239,56 @@
           </ResponseAssertion>
           <hashTree/>
         </hashTree>
-
       </hashTree>
-      <!-- /Fase 2 -->
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- FASE 3 — Monitor: Pollea audit log cada 30s por 10 min            -->
-      <!--          Verifica que las revocaciones aparezcan                  -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup"
-                   testname="[Fase 3] Monitor Audit Log - 10 min" enabled="true">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="[Fase 3] Monitor Audit Log - 10 min" enabled="true">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
-        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController"
-                     guiclass="LoopControlPanel" testclass="LoopController" enabled="true">
-          <intProp name="LoopController.loops">20</intProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController">
+          <stringProp name="LoopController.loops">20</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-
-        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement"
-                           testname="HTTP Defaults Fase 3" enabled="true">
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Defaults Fase 3" enabled="true">
+          <intProp name="HTTPSampler.connect_timeout">5000</intProp>
+          <intProp name="HTTPSampler.response_timeout">10000</intProp>
           <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
           <stringProp name="HTTPSampler.port">${PORT}</stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
-          <intProp name="HTTPSampler.connect_timeout">5000</intProp>
-          <intProp name="HTTPSampler.response_timeout">10000</intProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
-                       guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
+          <stringProp name="HTTPSampler.implementation"></stringProp>
         </ConfigTestElement>
         <hashTree/>
-
-        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer"
-                       testname="Espera 30s entre polls" enabled="true">
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Espera 30s entre polls" enabled="true">
           <stringProp name="ConstantTimer.delay">30000</stringProp>
         </ConstantTimer>
         <hashTree/>
-
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
-                          testname="GET /credentials/audit/ - Verificar revocaciones" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /credentials/audit/ - Verificar revocaciones" enabled="true">
           <stringProp name="HTTPSampler.path">/credentials/audit/</stringProp>
-          <stringProp name="HTTPSampler.method">GET</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
           <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
-                       guiclass="HTTPArgumentsPanel" testclass="Arguments" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion"
-                             testname="Verificar 200" enabled="true">
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Verificar 200" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="49586">200</stringProp>
             </collectionProp>
             <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
             <boolProp name="Assertion.assume_success">false</boolProp>
             <intProp name="Assertion.test_type">8</intProp>
+            <stringProp name="Assertion.custom_message"></stringProp>
           </ResponseAssertion>
           <hashTree/>
-          <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion"
-                             testname="Verificar campo audit_log presente" enabled="true">
+          <JSONPathAssertion guiclass="JSONPathAssertionGui" testclass="JSONPathAssertion" testname="Verificar campo audit_log presente" enabled="true">
             <stringProp name="JSON_PATH">$.audit_log</stringProp>
             <stringProp name="EXPECTED_VALUE"></stringProp>
             <boolProp name="JSONVALIDATION">false</boolProp>
@@ -370,15 +298,8 @@
           </JSONPathAssertion>
           <hashTree/>
         </hashTree>
-
       </hashTree>
-      <!-- /Fase 3 -->
-
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- LISTENERS                                                          -->
-      <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector"
-                       testname="Summary Report" enabled="true">
+      <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -414,9 +335,7 @@
         <stringProp name="filename">asr29_results.jtl</stringProp>
       </ResultCollector>
       <hashTree/>
-
-      <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector"
-                       testname="Aggregate Report" enabled="true">
+      <ResultCollector guiclass="StatVisualizer" testclass="ResultCollector" testname="Aggregate Report" enabled="true">
         <boolProp name="ResultCollector.error_logging">false</boolProp>
         <objProp>
           <name>saveConfig</name>
@@ -452,7 +371,6 @@
         <stringProp name="filename"></stringProp>
       </ResultCollector>
       <hashTree/>
-
     </hashTree>
   </hashTree>
 </jmeterTestPlan>
