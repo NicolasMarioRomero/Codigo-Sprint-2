@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -20,6 +21,7 @@
     </div>
     <div class="header-divider"></div>
     <span class="header-tag">Cloud Intelligence Platform</span>
+    <span class="header-group-tag">AlpesCloud · Grupo 4</span>
   </div>
 
   <div class="header-right">
@@ -33,7 +35,7 @@
       <svg id="iconSun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       <svg id="iconMoon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
-    <div class="avatar">BF</div>
+    <div class="avatar">AC</div>
   </div>
 </header>
 
@@ -41,7 +43,7 @@
 
   <nav class="sidebar">
     <div class="sidebar-group">
-      <div class="sidebar-label">Sprint 2</div>
+      <div class="sidebar-label">Analytics</div>
 
       <div class="nav-item active" onclick="showPage('dashboard', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -54,18 +56,13 @@
       </div>
 
       <div class="nav-item" onclick="showPage('reports', this)">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         Reportes
-      </div>
-
-      <div class="nav-item" onclick="showPage('asr', this)">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        ASR Métricas
       </div>
     </div>
 
     <div class="sidebar-group">
-      <div class="sidebar-label">Sprint 3</div>
+      <div class="sidebar-label">Plataforma</div>
 
       <div class="nav-item" onclick="showPage('places', this)">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 14 8 14s8-8.75 8-14a8 8 0 0 0-8-8z"/></svg>
@@ -176,34 +173,39 @@
       <div class="page-header">
         <div>
           <h1 class="page-title">Extractor de Métricas</h1>
-          <p class="page-sub">Agente agnóstico de proveedor · Reintentos con backoff exponencial</p>
+          <p class="page-sub">Captura de costos agnóstica de proveedor con reintentos automáticos y backoff exponencial</p>
         </div>
-        <span class="badge badge-green" style="font-size:12px;padding:5px 12px">ASR Escalabilidad</span>
       </div>
 
       <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><span class="card-title">Configuración</span></div>
+        <div class="card-header"><span class="card-title">Configuración de Extracción</span></div>
         <div class="field-row">
           <div class="form-group">
             <label class="field-label">Empresa</label>
-            <select id="extCompanySelect"></select>
+            <select id="extCompanySelect" class="field-input"></select>
           </div>
           <div class="form-group">
             <label class="field-label">Proveedor</label>
-            <select id="providerSelect">
+            <select id="providerSelect" class="field-input">
               <option value="aws">AWS</option>
               <option value="gcp">GCP</option>
             </select>
           </div>
           <div class="form-group">
             <label class="field-label">Proyecto</label>
-            <select id="projectSelect"></select>
+            <select id="projectSelect" class="field-input"></select>
           </div>
           <div class="form-group" style="justify-content:flex-end">
             <label class="field-label">&nbsp;</label>
             <div class="btn-group">
-              <button class="btn btn-primary" onclick="runExtractorSync()" id="btnExtSync">Extraer (Sync)</button>
-              <button class="btn btn-ghost" onclick="runExtractorAsync()" id="btnExtAsync">Encolar (Async)</button>
+              <button class="btn btn-primary" onclick="runExtractorSync()" id="btnExtSync">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Extraer (Sync)
+              </button>
+              <button class="btn btn-ghost" onclick="runExtractorAsync()" id="btnExtAsync">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Encolar (Async)
+              </button>
             </div>
           </div>
         </div>
@@ -237,7 +239,10 @@
           <h1 class="page-title">Reportes Detallados</h1>
           <p class="page-sub" id="reportSub">Selecciona una empresa y carga los reportes</p>
         </div>
-        <button class="btn btn-primary" onclick="loadReports()">Cargar Reportes</button>
+        <button class="btn btn-primary" onclick="loadReports()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Cargar Reportes
+        </button>
       </div>
       <div class="card">
         <div class="table-wrap">
@@ -260,84 +265,22 @@
       </div>
     </div>
 
-    <!-- ══════ ASR Métricas ══════ -->
-    <div class="page" id="page-asr">
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">ASR — Métricas de Calidad</h1>
-          <p class="page-sub">Monitoreo en tiempo real de los requisitos arquitectónicos significativos</p>
-        </div>
-      </div>
-
-      <div class="two-col" style="margin-bottom:16px">
-        <div class="card asr-card">
-          <div class="asr-card-header">
-            <span class="asr-tag asr-tag-violet">Latencia</span>
-            <span class="asr-status-val" id="latVal">—</span>
-          </div>
-          <div class="asr-card-title">Dashboard en menos de 3 segundos</div>
-          <div class="asr-card-desc">Con ~5,000 usuarios concurrentes, el dashboard debe responder en máximo 3 s mediante caché Redis y agregación SQL.</div>
-          <div class="asr-meter-row">
-            <div class="asr-meter"><div class="asr-fill" id="latFill" style="width:0%"></div></div>
-          </div>
-          <div class="asr-status-line" id="latStatus">Carga el dashboard para medir la latencia</div>
-          <div class="tactics-list">
-            <div class="tactic">Redis Cache — TTL 30 s para dashboard, 60 s para reportes</div>
-            <div class="tactic">Agregación SQL — GROUP BY en base de datos, sin bucles Python</div>
-            <div class="tactic">Índices — company_id y project_id indexados en PostgreSQL</div>
-            <div class="tactic">Connection Pool — SQLAlchemy pool para reducir overhead</div>
-          </div>
-        </div>
-
-        <div class="card asr-card">
-          <div class="asr-card-header">
-            <span class="asr-tag asr-tag-green">Escalabilidad</span>
-            <span class="asr-status-val" id="scaleVal">—</span>
-          </div>
-          <div class="asr-card-title">100% de éxito en extracciones</div>
-          <div class="asr-card-desc">El extractor captura métricas de forma agnóstica en ambientes sobrecargados con reintentos automáticos hasta garantizar el 100% de éxito.</div>
-          <div class="asr-meter-row">
-            <div class="asr-meter"><div class="asr-fill" id="scaleFill" style="width:0%"></div></div>
-          </div>
-          <div class="asr-status-line" id="scaleStatus">Ejecuta una extracción para ver métricas</div>
-          <div class="tactics-list">
-            <div class="tactic">Reintentos — máximo 5 intentos con backoff exponencial 2ⁿ</div>
-            <div class="tactic">Jitter aleatorio — evita thundering herd en los reintentos</div>
-            <div class="tactic">Patrón Strategy — proveedor agnóstico AWS / GCP</div>
-            <div class="tactic">Celery — cola de tareas para extracciones de larga duración</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Historial de Mediciones</span>
-          <span class="badge badge-violet" id="histCount">0</span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Hora</th><th>ASR</th><th>Empresa</th><th>Fuente</th><th>Resultado</th><th>Estado</th></tr></thead>
-            <tbody id="asrHistory">
-              <tr><td colspan="6"><div class="empty-state">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                <p>Las mediciones aparecerán aquí al usar el dashboard y el extractor</p>
-              </div></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <!-- ══════ Places ══════ -->
     <div class="page" id="page-places">
       <div class="page-header">
         <div>
           <h1 class="page-title">Places</h1>
-          <p class="page-sub">Colección distribuida en clúster MongoDB Sharded · Sprint 3 Disponibilidad</p>
+          <p class="page-sub">Colección de lugares distribuida en clúster MongoDB Sharded</p>
         </div>
         <div class="btn-group">
-          <button class="btn btn-ghost" onclick="checkPlacesHealth()">Health Check</button>
-          <button class="btn btn-primary" onclick="loadPlaces()">Cargar Places</button>
+          <button class="btn btn-ghost" onclick="checkPlacesHealth()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Health Check
+          </button>
+          <button class="btn btn-primary" onclick="loadPlaces()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.18-1"/></svg>
+            Cargar Places
+          </button>
         </div>
       </div>
 
@@ -384,44 +327,19 @@
       <div class="page-header">
         <div>
           <h1 class="page-title">Vault de Credenciales</h1>
-          <p class="page-sub">ASR29 Seguridad — Detección de anomalías vía RabbitMQ pub/sub</p>
+          <p class="page-sub">Gestión de credenciales con detección de anomalías en tiempo real</p>
         </div>
-        <button class="btn btn-ghost" onclick="loadAuditLog()">Ver Audit Log</button>
-      </div>
-
-      <div class="card asr-info-card" style="margin-bottom:16px">
-        <div class="asr-info-layout">
-          <div class="asr-info-body">
-            <div class="asr-tag asr-tag-violet" style="margin-bottom:10px">ASR 29 — Seguridad</div>
-            <div class="asr-card-title">Detección de anomalías en uso de credenciales</div>
-            <div class="asr-card-desc" style="margin-top:6px">Cuando una credencial se usa desde un país inusual, fuera de horario o con volumen anómalo, el sistema publica un evento en RabbitMQ y el consumer emite una alerta. El ASR exige que el 100% de los accesos anómalos sean detectados y registrados.</div>
-            <div class="tactics-row" style="margin-top:12px">
-              <span class="tactic-tag">RabbitMQ pub/sub</span>
-              <span class="tactic-tag">Regla GEO</span>
-              <span class="tactic-tag">Regla TIME</span>
-              <span class="tactic-tag">Regla VOLUMEN</span>
-            </div>
-          </div>
-          <div class="asr-stats-grid" id="asr29Stats">
-            <div class="stat-box">
-              <div class="stat-num" id="s29Total">0</div>
-              <div class="stat-lbl">Usos totales</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-num stat-red" id="s29Anomalias">0</div>
-              <div class="stat-lbl">Anomalías</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-num stat-green" id="s29Tasa">—</div>
-              <div class="stat-lbl">Tasa detección</div>
-            </div>
-          </div>
-        </div>
+        <button class="btn btn-ghost" onclick="loadAuditLog()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Ver Audit Log
+        </button>
       </div>
 
       <div class="two-col" style="margin-bottom:16px">
         <div class="card">
-          <div class="card-header"><span class="card-title">Registrar Credencial</span></div>
+          <div class="card-header">
+            <span class="card-title">Registrar Credencial</span>
+          </div>
           <div class="form-stack">
             <div class="form-group">
               <label class="field-label">ID Credencial</label>
@@ -458,7 +376,9 @@
         </div>
 
         <div class="card">
-          <div class="card-header"><span class="card-title">Simular Uso</span></div>
+          <div class="card-header">
+            <span class="card-title">Simular Uso de Credencial</span>
+          </div>
           <div class="form-stack">
             <div class="form-group">
               <label class="field-label">ID Credencial</label>
@@ -471,17 +391,37 @@
             <div class="form-group">
               <label class="field-label">País de acceso</label>
               <select id="useCountry" class="field-input">
-                <option value="CO">CO — Normal</option>
-                <option value="US">US — Normal</option>
-                <option value="MX">MX — Normal</option>
-                <option value="RU">RU — Anómalo</option>
-                <option value="CN">CN — Anómalo</option>
-                <option value="KP">KP — Anómalo</option>
+                <option value="CO">CO — Colombia (normal)</option>
+                <option value="US">US — Estados Unidos (normal)</option>
+                <option value="MX">MX — México (normal)</option>
+                <option value="RU">RU — Rusia (anómalo)</option>
+                <option value="CN">CN — China (anómalo)</option>
+                <option value="KP">KP — Corea del Norte (anómalo)</option>
               </select>
             </div>
+            <div class="cred-stats-row">
+              <div class="mini-stat">
+                <span class="mini-stat-num" id="s29Total">0</span>
+                <span class="mini-stat-lbl">Usos</span>
+              </div>
+              <div class="mini-stat mini-stat-red">
+                <span class="mini-stat-num" id="s29Anomalias">0</span>
+                <span class="mini-stat-lbl">Anomalías</span>
+              </div>
+              <div class="mini-stat mini-stat-green">
+                <span class="mini-stat-num" id="s29Tasa">—</span>
+                <span class="mini-stat-lbl">Tasa detección</span>
+              </div>
+            </div>
             <div class="two-btn-row">
-              <button class="btn btn-success" style="flex:1" onclick="useCredential(false)">Acceso Normal</button>
-              <button class="btn btn-danger" style="flex:1" onclick="useCredential(true)">Simular Anomalía</button>
+              <button class="btn btn-success" style="flex:1" onclick="useCredential(false)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Acceso Normal
+              </button>
+              <button class="btn btn-danger" style="flex:1" onclick="useCredential(true)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Simular Anomalía
+              </button>
             </div>
             <div class="cred-result" id="credResult" style="display:none"></div>
           </div>
@@ -500,7 +440,7 @@
             <tbody id="auditLogBody">
               <tr><td colspan="7"><div class="empty-state">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <p>Presiona "Ver Audit Log" o usa una credencial para ver eventos</p>
+                <p>Presiona "Ver Audit Log" o usa una credencial para ver los eventos</p>
               </div></td></tr>
             </tbody>
           </table>
@@ -513,37 +453,28 @@
       <div class="page-header">
         <div>
           <h1 class="page-title">Log Masking</h1>
-          <p class="page-sub">ASR30 Seguridad — SensitiveDataFilter enmascara datos sensibles en los logs de Django</p>
+          <p class="page-sub">Protección automática de datos sensibles en los registros del sistema</p>
         </div>
       </div>
 
-      <div class="card asr-info-card" style="margin-bottom:16px">
-        <div class="asr-info-layout">
-          <div class="asr-info-body">
-            <div class="asr-tag asr-tag-teal" style="margin-bottom:10px">ASR 30 — Seguridad</div>
-            <div class="asr-card-title">100% de datos sensibles enmascarados en logs</div>
-            <div class="asr-card-desc" style="margin-top:6px">El <code class="inline-code">SensitiveDataFilter</code> intercepta todos los registros de log y reemplaza automáticamente AWS keys, JWTs, Account IDs y URIs de base de datos con <code class="inline-code">[MASKED]</code> antes de persistirlos en el sistema.</div>
-            <div class="tactics-row" style="margin-top:12px">
-              <span class="tactic-tag">AWS Secret Keys</span>
-              <span class="tactic-tag">JWT Tokens</span>
-              <span class="tactic-tag">AWS Account IDs</span>
-              <span class="tactic-tag">Database URIs</span>
-            </div>
-          </div>
-          <div class="asr-stats-grid" id="asr30Stats">
-            <div class="stat-box">
-              <div class="stat-num" id="s30Tests">0</div>
-              <div class="stat-lbl">Pruebas</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-num stat-green" id="s30Masked">0</div>
-              <div class="stat-lbl">Enmascarados</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-num stat-green" id="s30Pct">—</div>
-              <div class="stat-lbl">Efectividad</div>
-            </div>
-          </div>
+      <div class="masking-overview-bar">
+        <div class="masking-overview-item">
+          <span class="masking-overview-num" id="s30Tests">0</span>
+          <span class="masking-overview-lbl">Pruebas realizadas</span>
+        </div>
+        <div class="masking-overview-sep"></div>
+        <div class="masking-overview-item">
+          <span class="masking-overview-num masking-green" id="s30Masked">0</span>
+          <span class="masking-overview-lbl">Enmascarados</span>
+        </div>
+        <div class="masking-overview-sep"></div>
+        <div class="masking-overview-item">
+          <span class="masking-overview-num masking-green" id="s30Pct">—</span>
+          <span class="masking-overview-lbl">Efectividad</span>
+        </div>
+        <div class="masking-overview-sep"></div>
+        <div class="masking-overview-desc">
+          El <strong>SensitiveDataFilter</strong> intercepta todos los registros de log y reemplaza automáticamente con <code class="inline-code">[MASKED]</code> antes de persistirlos.
         </div>
       </div>
 
@@ -555,7 +486,7 @@
           </div>
           <div class="leak-sample"><code>AKIAIOSFODNN7EXAMPLE / wJalrXUtnFEMI...</code></div>
           <p class="leak-desc">Simula un log con una clave secreta de AWS. El filtro debe reemplazarla con <code class="inline-code">[MASKED]</code>.</p>
-          <button class="btn btn-primary btn-block" onclick="testLeak('aws-key', this)">Probar Enmascaramiento</button>
+          <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="testLeak('aws-key', this)">Probar Enmascaramiento</button>
           <div class="leak-result" id="lr-aws-key" style="display:none"></div>
         </div>
 
@@ -566,7 +497,7 @@
           </div>
           <div class="leak-sample"><code>eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0...</code></div>
           <p class="leak-desc">Simula un log con un token JWT. El filtro detecta el patrón <code class="inline-code">eyJ</code> característico de la codificación Base64.</p>
-          <button class="btn btn-primary btn-block" onclick="testLeak('jwt', this)">Probar Enmascaramiento</button>
+          <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="testLeak('jwt', this)">Probar Enmascaramiento</button>
           <div class="leak-result" id="lr-jwt" style="display:none"></div>
         </div>
 
@@ -577,7 +508,7 @@
           </div>
           <div class="leak-sample"><code>123456789012</code></div>
           <p class="leak-desc">Simula un log con un Account ID de AWS (12 dígitos consecutivos). El filtro lo detecta y enmascara.</p>
-          <button class="btn btn-primary btn-block" onclick="testLeak('account', this)">Probar Enmascaramiento</button>
+          <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="testLeak('account', this)">Probar Enmascaramiento</button>
           <div class="leak-result" id="lr-account" style="display:none"></div>
         </div>
 
@@ -588,7 +519,7 @@
           </div>
           <div class="leak-sample"><code>postgresql://user:pass@host:5432/db</code></div>
           <p class="leak-desc">Simula un log con una URI de base de datos. El filtro enmascara credenciales en esquemas <code class="inline-code">postgresql://</code>, <code class="inline-code">mysql://</code>, etc.</p>
-          <button class="btn btn-primary btn-block" onclick="testLeak('db-uri', this)">Probar Enmascaramiento</button>
+          <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="testLeak('db-uri', this)">Probar Enmascaramiento</button>
           <div class="leak-result" id="lr-db-uri" style="display:none"></div>
         </div>
       </div>
@@ -609,31 +540,13 @@
     <div class="page" id="page-disponibilidad">
       <div class="page-header">
         <div>
-          <h1 class="page-title">Disponibilidad — Failover MongoDB</h1>
-          <p class="page-sub">Experimento de failover en clúster sharded · Criterio: delta_t menor a 5 segundos</p>
+          <h1 class="page-title">Disponibilidad del Clúster</h1>
+          <p class="page-sub">Estado en tiempo real del clúster MongoDB Sharded con alta disponibilidad</p>
         </div>
-        <button class="btn btn-ghost" onclick="checkDisponibilidad()">Verificar Estado</button>
-      </div>
-
-      <div class="card asr-info-card" style="margin-bottom:16px">
-        <div class="asr-info-layout">
-          <div class="asr-info-body">
-            <div class="asr-tag asr-tag-blue" style="margin-bottom:10px">ASR — Disponibilidad</div>
-            <div class="asr-card-title">Failover de shard MongoDB en menos de 5 segundos</div>
-            <div class="asr-card-desc" style="margin-top:6px">Bajo carga sostenida de 200 req/s sobre <code class="inline-code">GET /places/</code>, el tiempo de failover al detener el nodo primario de un shard debe ser inferior a 5,000 ms en al menos 4 de 5 corridas. El throughput debe recuperarse al 100% en menos de 30 segundos.</div>
-            <div class="asr-meter-row" style="margin-top:14px">
-              <div class="asr-meter"><div class="asr-fill" id="disponFill" style="width:0%"></div></div>
-              <span class="asr-status-val" id="disponVal">—</span>
-            </div>
-            <div class="asr-status-line" id="disponStatus" style="margin-top:6px">Verifica el estado del clúster para comenzar</div>
-            <div class="tactics-row" style="margin-top:12px">
-              <span class="tactic-tag">Replica Set por shard</span>
-              <span class="tactic-tag">Elección automática de primario</span>
-              <span class="tactic-tag">mongos router</span>
-              <span class="tactic-tag">Reconexión automática del driver</span>
-            </div>
-          </div>
-        </div>
+        <button class="btn btn-ghost" onclick="checkDisponibilidad()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Verificar Estado
+        </button>
       </div>
 
       <div class="shard-grid" id="clusterGrid">
@@ -673,19 +586,19 @@
 
       <div class="two-col" style="margin-top:16px">
         <div class="card">
-          <div class="card-header"><span class="card-title">Procedimiento del Experimento</span></div>
+          <div class="card-header"><span class="card-title">Procedimiento de Failover</span></div>
           <div class="steps-list">
-            <div class="step"><div class="step-num">1</div><div class="step-body">Inicia JMeter con <code class="inline-code">jmeter_disponibilidad.jmx</code> — 200 req/s sostenidos por 12 minutos</div></div>
+            <div class="step"><div class="step-num">1</div><div class="step-body">Inicia la prueba de carga con JMeter — 200 req/s sostenidos por 12 minutos sobre <code class="inline-code">GET /places/</code></div></div>
             <div class="step"><div class="step-num">2</div><div class="step-body">Espera 2 minutos de calentamiento hasta que la carga sea estable</div></div>
-            <div class="step"><div class="step-num">3</div><div class="step-body">En el minuto 5, detén el primario de shard1:<br><code class="code-block">ssh ubuntu@IP "docker stop shard1a"</code></div></div>
-            <div class="step"><div class="step-num">4</div><div class="step-body">Observa el pico de errores y el tiempo de recuperación en JMeter (Graph Results)</div></div>
-            <div class="step"><div class="step-num">5</div><div class="step-body">Reinicia el shard y repite 5 veces:<br><code class="code-block">docker start shard1a &amp;&amp; sleep 30</code></div></div>
+            <div class="step"><div class="step-num">3</div><div class="step-body">En el minuto 5, detén el nodo primario del shard:<br><code class="code-block">ssh ubuntu@IP "docker stop shard1b"</code></div></div>
+            <div class="step"><div class="step-num">4</div><div class="step-body">Observa el pico de errores y el tiempo de recuperación en los resultados</div></div>
+            <div class="step"><div class="step-num">5</div><div class="step-body">Reinicia el shard y repite el proceso:<br><code class="code-block">docker start shard1b &amp;&amp; sleep 30</code></div></div>
           </div>
           <div class="criteria-box">
-            <div class="criteria-title">Criterio de aceptación</div>
-            <div class="criteria-item">delta_t failover menor a 5,000 ms en 4 de 5 corridas</div>
-            <div class="criteria-item">Porcentaje de error proporcional a delta_t × 200 req/s</div>
-            <div class="criteria-item">Throughput vuelve al 100% en menos de 30 segundos</div>
+            <div class="criteria-title">Criterios de aceptación</div>
+            <div class="criteria-item">Tiempo de failover inferior a 5,000 ms en 4 de 5 corridas</div>
+            <div class="criteria-item">Tasa de error proporcional al tiempo de failover × throughput</div>
+            <div class="criteria-item">Throughput recuperado al 100% en menos de 30 segundos</div>
           </div>
         </div>
 

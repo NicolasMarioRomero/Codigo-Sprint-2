@@ -615,6 +615,67 @@ tbody tr:last-child td { border-bottom: none; }
 
 .record-run-form { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 
+/* ─── AlpesCloud group tag ────────────────────────────── */
+.header-group-tag {
+  font-size: 11px; font-weight: 600;
+  color: var(--accent-soft);
+  background: var(--accent-dim);
+  border: 1px solid var(--border2);
+  padding: 2px 9px; border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
+/* ─── Credential mini-stats ────────────────────────────── */
+.cred-stats-row {
+  display: flex; gap: 8px; margin: 4px 0;
+}
+.mini-stat {
+  flex: 1; text-align: center; padding: 8px 4px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.mini-stat-red  { border-color: var(--red-dim); }
+.mini-stat-green{ border-color: var(--green-dim); }
+.mini-stat-num {
+  display: block; font-size: 18px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.3px;
+}
+.mini-stat-red  .mini-stat-num { color: var(--red-soft); }
+.mini-stat-green .mini-stat-num { color: var(--green-soft); }
+.mini-stat-lbl {
+  display: block; font-size: 10px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px;
+}
+
+/* ─── Log Masking overview bar ────────────────────────── */
+.masking-overview-bar {
+  display: flex; align-items: center; gap: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px 24px;
+  margin-bottom: 20px; flex-wrap: wrap; gap: 16px;
+}
+.masking-overview-item {
+  text-align: center; min-width: 90px;
+}
+.masking-overview-num {
+  display: block; font-size: 26px; font-weight: 800;
+  color: var(--text); letter-spacing: -0.5px;
+}
+.masking-green { color: var(--green-soft); }
+.masking-overview-lbl {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px;
+}
+.masking-overview-sep {
+  width: 1px; height: 40px; background: var(--border);
+  flex-shrink: 0;
+}
+.masking-overview-desc {
+  flex: 1; min-width: 200px; font-size: 13px;
+  color: var(--text-soft); line-height: 1.6;
+  padding-left: 8px;
+}
+
 /* ─── Responsive ──────────────────────────────────────── */
 @media (max-width: 1024px) {
   :root { --sidebar-w: 200px; }

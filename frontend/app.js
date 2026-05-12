@@ -88,6 +88,10 @@ function now() { return new Date().toLocaleTimeString('es-CO', { hour12: false }
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+function safeSet(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
 
 // ─── Toast ─────────────────────────────────────────────
 function toast(msg, type = 'info') {
@@ -200,9 +204,9 @@ async function loadDashboard(force) {
     document.getElementById(x).innerHTML = Array(4).fill('<div class="bar-row"><div class="bar-label"><div style="height:8px;border-radius:3px;background:var(--surface3);animation:shimmer 1.4s infinite;background-size:200% 100%"></div></div><div class="bar-track" style="flex:1"></div></div>').join('');
   });
 
-  const badge = document.getElementById('latencyBadge');
-  const dot   = document.getElementById('latencyDot');
-  const ltext = document.getElementById('latencyText');
+  const badge   = document.getElementById('latencyBadge');
+  const dot     = document.getElementById('latencyDot');
+  const ltext   = document.getElementById('latencyText');
   const spinner = document.getElementById('latencySpinner');
   badge.classList.add('visible');
   spinner.style.display = 'inline-block';
@@ -236,8 +240,7 @@ async function loadDashboard(force) {
       : '<span class="source-chip source-db">base de datos</span>';
 
     document.getElementById('dashSub').textContent = `Company ${id} · ${s.record_count ?? 0} registros · ${s.project_count ?? 0} proyectos`;
-    updateAsrLatency(elapsed, ok, id, src);
-    toast(`Dashboard en ${elapsed} ms ${ok ? '— dentro del ASR' : '— supera los 3 s'}`, ok ? 'ok' : 'warn');
+    toast(`Dashboard en ${elapsed} ms`, ok ? 'ok' : 'warn');
   } catch(e) {
     spinner.style.display = 'none';
     dot.className = 'latency-dot bad';
@@ -332,11 +335,9 @@ async function runExtractorSync() {
             <div class="region">${m.region||m.project_id||'—'}</div>
           </div>`).join('');
       }
-      updateAsrScalability(att, true);
       toast(`${data.metrics_count} métricas extraídas en ${elapsed} ms`, 'ok');
     } else {
       addLog('err', data.detail||data.message||JSON.stringify(data));
-      updateAsrScalability(5, false);
       toast('Extracción fallida', 'err');
     }
   } catch(e) { addLog('err','Error de conexión: '+e.message); toast('Error de conexión','err'); }
@@ -382,46 +383,6 @@ function addLog(type,msg){
 }
 function setExtractorBtns(loading){['btnExtSync','btnExtAsync'].forEach(id=>document.getElementById(id).disabled=loading);}
 
-// ─── ASR panels ─────────────────────────────────────────
-function setFill(fillId, pct, ok) {
-  const el = document.getElementById(fillId);
-  el.style.width = pct + '%';
-  el.style.background = ok ? 'var(--green)' : 'var(--red)';
-}
-
-function updateAsrLatency(ms, ok, companyId, src) {
-  setFill('latFill', Math.min(100, ms/3000*100), ok);
-  const val = document.getElementById('latVal');
-  val.textContent = ms+' ms';
-  val.style.color = ok ? 'var(--green-soft)' : 'var(--red-soft)';
-  document.getElementById('latStatus').textContent = ok ? `Cumple el ASR — respuesta en ${ms} ms (límite 3,000 ms)` : `No cumple — ${ms} ms supera el límite de 3,000 ms`;
-  addAsrHistory('Latencia','Company '+companyId,src,ms+' ms',ok);
-}
-
-function updateAsrScalability(attempts, ok) {
-  setFill('scaleFill', ok ? 100 : Math.max(0,100-attempts*20), ok);
-  const val = document.getElementById('scaleVal');
-  val.textContent = ok ? '100%' : 'Fallida';
-  val.style.color = ok ? 'var(--green-soft)' : 'var(--red-soft)';
-  document.getElementById('scaleStatus').textContent = ok ? `Éxito en ${attempts} intento(s)` : 'Extracción fallida';
-  addAsrHistory('Escalabilidad', document.getElementById('providerSelect').value.toUpperCase(), attempts+' intentos', ok?'100%':'0%', ok);
-}
-
-function addAsrHistory(asr, empresa, fuente, resultado, ok) {
-  const tbody=document.getElementById('asrHistory');
-  if(tbody.querySelector('.empty-state'))tbody.innerHTML='';
-  const row=document.createElement('tr');
-  row.innerHTML=`
-    <td style="color:var(--text-muted)">${now()}</td>
-    <td><span class="badge ${asr==='Latencia'?'badge-violet':'badge-green'}">${asr}</span></td>
-    <td>${empresa}</td><td style="color:var(--text-muted)">${fuente}</td>
-    <td style="font-weight:600">${resultado}</td>
-    <td style="color:${ok?'var(--green-soft)':'var(--red-soft)'};font-weight:600">${ok?'Cumple':'No cumple'}</td>`;
-  tbody.insertBefore(row,tbody.firstChild);
-  const c=parseInt(document.getElementById('histCount').textContent||'0');
-  document.getElementById('histCount').textContent=c+1;
-}
-
 // ═══ SPRINT 3: PLACES ═════════════════════════════════
 
 async function checkPlacesHealth() {
@@ -440,17 +401,18 @@ async function checkPlacesHealth() {
       dot.className='status-indicator ok';
       text.textContent=`Clúster MongoDB operativo — respondió en ${elapsed} ms`;
       detail.textContent=JSON.stringify(data).substring(0,120);
-      document.getElementById('pkCluster').textContent='Operativo';
-      document.getElementById('pkCluster').style.color='var(--green-soft)';
-      document.getElementById('pkLatency').textContent=elapsed+' ms';
+      safeSet('pkCluster','Operativo');
+      const pkc=document.getElementById('pkCluster');
+      if(pkc)pkc.style.color='var(--green-soft)';
+      safeSet('pkLatency',elapsed+' ms');
       toast('Health check exitoso','ok');
     } else { throw new Error(`HTTP ${r.status}`); }
   } catch(e) {
     dot.className='status-indicator err';
     text.textContent='Clúster no disponible o en proceso de failover';
     detail.textContent=e.message;
-    document.getElementById('pkCluster').textContent='Error';
-    document.getElementById('pkCluster').style.color='var(--red-soft)';
+    const pkc=document.getElementById('pkCluster');
+    if(pkc){pkc.textContent='Error';pkc.style.color='var(--red-soft)';}
     toast('Health check fallido: '+e.message,'err');
   }
 }
@@ -458,17 +420,17 @@ async function checkPlacesHealth() {
 async function loadPlaces() {
   const grid=document.getElementById('placesGrid');
   grid.innerHTML='<div class="empty-state"><div class="spinner" style="margin:0 auto 10px"></div><p>Cargando documentos del clúster…</p></div>';
-  document.getElementById('pkLatency').textContent='…';
+  safeSet('pkLatency','…');
   const t0=performance.now();
   try {
     const r=await fetch('/places/');
     const elapsed=Math.round(performance.now()-t0);
     if(!r.ok)throw new Error(`HTTP ${r.status}`);
     const data=await r.json();
-    document.getElementById('pkLatency').textContent=elapsed+' ms';
+    safeSet('pkLatency',elapsed+' ms');
     const arr=Array.isArray(data)?data:Array.isArray(data.places)?data.places:Object.values(data.places||data||{});
-    document.getElementById('pkTotal').textContent=arr.length;
-    document.getElementById('placesCount').textContent=arr.length;
+    safeSet('pkTotal',arr.length);
+    safeSet('placesCount',arr.length);
     document.getElementById('placesStatusDot').className='status-indicator ok';
     document.getElementById('placesStatusText').textContent=`${arr.length} documentos cargados en ${elapsed} ms`;
     if(!arr.length){
@@ -528,7 +490,7 @@ async function useCredential(forceAnomaly) {
     credUseTotal++;
     const isAnom=data.anomaly_detected||data.alert||forceAnomaly;
     if(isAnom)credAnomalias++;
-    updateAsr29Stats();
+    updateCredStats();
     result.style.display='block';
     if(r.ok){
       result.className='cred-result '+(isAnom?'result-anomaly':'result-ok');
@@ -548,10 +510,10 @@ async function useCredential(forceAnomaly) {
   }
 }
 
-function updateAsr29Stats() {
-  document.getElementById('s29Total').textContent=credUseTotal;
-  document.getElementById('s29Anomalias').textContent=credAnomalias;
-  document.getElementById('s29Tasa').textContent=credUseTotal>0?Math.round(credAnomalias/credUseTotal*100)+'%':'—';
+function updateCredStats() {
+  safeSet('s29Total', credUseTotal);
+  safeSet('s29Anomalias', credAnomalias);
+  safeSet('s29Tasa', credUseTotal>0 ? Math.round(credAnomalias/credUseTotal*100)+'%' : '—');
 }
 
 async function loadAuditLog() {
@@ -562,7 +524,7 @@ async function loadAuditLog() {
     if(!r.ok)throw new Error(`HTTP ${r.status}`);
     const data=await r.json();
     const arr=Array.isArray(data)?data:Array.isArray(data.logs)?data.logs:[];
-    document.getElementById('auditCount').textContent=arr.length;
+    safeSet('auditCount', arr.length);
     if(!arr.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><p>No hay eventos en el audit log todavía</p></div></td></tr>`;return;}
     tbody.innerHTML=arr.slice(0,50).map(log=>{
       const anom=log.is_anomaly||log.anomaly||log.alert_type;
@@ -621,10 +583,10 @@ async function testLeak(type, btn) {
       addMaskLog('err',`${type} — no enmascarado`);
       toast(`${type} no fue enmascarado`,'err');
     }
-    document.getElementById('s30Tests').textContent=maskTestCount;
-    document.getElementById('s30Masked').textContent=maskSuccessCount;
-    document.getElementById('s30Pct').textContent=maskTestCount>0?Math.round(maskSuccessCount/maskTestCount*100)+'%':'—';
-    document.getElementById('maskCount').textContent=maskTestCount;
+    safeSet('s30Tests', maskTestCount);
+    safeSet('s30Masked', maskSuccessCount);
+    safeSet('s30Pct', maskTestCount>0 ? Math.round(maskSuccessCount/maskTestCount*100)+'%' : '—');
+    safeSet('maskCount', maskTestCount);
   } catch(e) {
     resultEl.style.display='block';resultEl.className='leak-result lr-err';
     resultEl.innerHTML=`<div class="lr-status" style="color:var(--red-soft)">Error: ${escHtml(e.message)}</div>`;
@@ -643,10 +605,9 @@ function addMaskLog(type,msg){
 
 function clearMaskLog(){
   document.getElementById('maskLog').innerHTML='';
-  maskTestCount=0;maskSuccessCount=0;
-  ['s30Tests','s30Masked'].forEach(id=>document.getElementById(id).textContent='0');
-  document.getElementById('s30Pct').textContent='—';
-  document.getElementById('maskCount').textContent='0';
+  maskTestCount=0; maskSuccessCount=0;
+  safeSet('s30Tests','0'); safeSet('s30Masked','0');
+  safeSet('s30Pct','—'); safeSet('maskCount','0');
   document.querySelectorAll('.leak-card').forEach(c=>{c.classList.remove('card-ok','card-err');});
   document.querySelectorAll('.leak-result').forEach(r=>r.style.display='none');
   document.querySelectorAll('.leak-status-dot').forEach(d=>d.className='leak-status-dot');
@@ -660,7 +621,6 @@ async function checkDisponibilidad() {
     document.getElementById('si-'+id).className='shard-indicator ind-loading';
     document.getElementById('ss-'+id).textContent='Verificando…';
   });
-  document.getElementById('disponStatus').textContent='Verificando estado del clúster…';
   const t0=performance.now();
   try {
     const r=await fetch('/health');
@@ -672,19 +632,11 @@ async function checkDisponibilidad() {
       ['shard1','shard2','shard3'].forEach(s=>{
         setShardStatus(s,ss?ss[s]!==false:true,'Replica set activo');
       });
-      setFill('disponFill',100,true);
-      document.getElementById('disponVal').textContent=elapsed+' ms';
-      document.getElementById('disponVal').style.color='var(--green-soft)';
-      document.getElementById('disponStatus').textContent=`Clúster completamente operativo — health en ${elapsed} ms`;
       toast(`Clúster operativo — ${elapsed} ms`,'ok');
     } else { throw new Error(`HTTP ${r.status}`); }
   } catch(e) {
     setShardStatus('mongos',false,'Error');
     ['shard1','shard2','shard3'].forEach(id=>setShardStatus(id,null,'Estado desconocido'));
-    setFill('disponFill',15,false);
-    document.getElementById('disponVal').textContent='Error';
-    document.getElementById('disponVal').style.color='var(--red-soft)';
-    document.getElementById('disponStatus').textContent='Clúster no disponible — posible failover en curso';
     toast('Error en verificación: '+e.message,'err');
   }
 }
@@ -713,7 +665,7 @@ function renderFailoverResults(){
   if(!failoverRuns.length){el.innerHTML='<div class="empty-state" style="padding:24px"><p>Sin corridas registradas</p></div>';return;}
   const passing=failoverRuns.filter(r=>r.ok).length;
   const color=passing>=4?'var(--green-soft)':passing>=2?'var(--yellow)':'var(--red-soft)';
-  const label=passing>=4?'ASR Cumplido':passing>=2?'Parcialmente cumplido':'No cumple';
+  const label=passing>=4?'Criterio Cumplido':passing>=2?'Parcialmente cumplido':'No cumple';
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <span style="font-size:12px;color:var(--text-muted)">${failoverRuns.length} corrida(s) registradas</span>
@@ -732,8 +684,4 @@ function renderFailoverResults(){
         </tbody>
       </table>
     </div>`;
-  setFill('disponFill',Math.round(passing/5*100),passing>=4);
-  document.getElementById('disponVal').textContent=passing+'/5';
-  document.getElementById('disponVal').style.color=color;
-  document.getElementById('disponStatus').textContent=`${label} — ${passing} de 5 corridas con delta_t < 5,000 ms`;
 }
